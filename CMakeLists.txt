@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 
 include(pico_sdk_import.cmake)
 
-project(pico-ism330dlc)
+project(ism330dlc_driver)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -11,26 +11,17 @@ set(CMAKE_CXX_STANDARD 17)
 
 pico_sdk_init()
 
-add_library(pico-ism330dlc STATIC)
+add_library(ism330dlc_driver STATIC src/ism330dlc_driver.c)
 
-target_link_libraries(pico-ism330dlc
-    pico_stdlib
-    hardware_i2c
-    hardware_spi
-)
-
-target_sources(pico-ism330dlc 
+target_sources(ism330dlc_driver 
     PRIVATE 
         src/ism330dlc_driver.c
-        platform/pico/ism330dlc_pico_hal.c
 )
-
-target_include_directories(pico-ism330dlc 
+target_include_directories(ism330dlc_driver 
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/platform
 )
 
