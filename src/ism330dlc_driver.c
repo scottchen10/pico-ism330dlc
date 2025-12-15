@@ -25,7 +25,7 @@ ism330dlc_status_t ism330dlc_read_who_am_i(ism330dlc_t* device, uint8_t* result)
 };
 
 ism330dlc_status_t ism330dlc_read_raw_accel_data(ism330dlc_t* device, ism330dlc_raw_xyz_t *result) {
-    ism330dlc_status_t response = device->read_registers(
+    return device->read_registers(
         device->device_context,
         ISM330DLC_ADDR_OUTX_L_XL,
         result->values,
@@ -36,7 +36,7 @@ ism330dlc_status_t ism330dlc_read_raw_accel_data(ism330dlc_t* device, ism330dlc_
 
 
 ism330dlc_status_t ism330dlc_read_raw_gyro_data(ism330dlc_t* device, ism330dlc_raw_xyz_t *result) {
-    ism330dlc_status_t response = device->read_registers(
+    return device->read_registers(
         device->device_context,
         ISM330DLC_ADDR_OUTX_L_G,
         result->values,
@@ -47,12 +47,73 @@ ism330dlc_status_t ism330dlc_read_raw_gyro_data(ism330dlc_t* device, ism330dlc_r
 
 ism330dlc_status_t ism330dlc_read_raw_temperature_data(ism330dlc_t* device, ism330dlc_reg16_t *result)
 {
-    ism330dlc_status_t response = device->read_registers(
+    return device->read_registers(
         device->device_context,
         ISM330DLC_ADDR_OUT_TEMP_L,
         result->u8,
         2
     );
-    return ISM330DLC_SUCCESS;    
 };
 
+ism330dlc_status_t ism330dlc_update_accel_performance_mode(ism330dlc_t* device, ism330dlc_accel_gyro_performance_mode_t mode)
+{
+    uint8_t ctrl6_c_reg_state; 
+    
+    ism330dlc_status_t resp = device->read_registers(
+        device->device_context,
+        ISM330DLC_ADDR_CTRL6_C,
+        &ctrl6_c_reg_state,
+        1
+    );
+
+    if (resp != ISM330DLC_SUCCESS) 
+        return resp;
+
+    uint8_t ctrl_c_new_state = ctrl6_c_reg_state & ~ISM330DLC_MASK_XL_HM_MODE;
+    
+    if (mode == ISM330DLC_ACCEL_GYRO_LOW_PERFORMANCE) 
+    {
+        ctrl_c_new_state |= ISM330DLC_MASK_XL_HM_MODE;
+    }
+
+    return device->write_registers(
+        device->device_context,
+        ISM330DLC_ADDR_CTRL6_C,
+        &ctrl6_c_reg_state,
+        1
+    );
+};
+ism330dlc_status_t ism330dlc_update_accel_odr(ism330dlc_t* device, ism330dlc_accel_gyro_odr_t odr);
+ism330dlc_status_t ism330dlc_read_accel_odr(ism330dlc_t* device);
+
+ism330dlc_status_t ism330dlc_update_gyro_performance_mode(ism330dlc_t* device, ism330dlc_accel_gyro_performance_mode_t mode)
+{
+    uint8_t ctrl7_c_reg_stae; 
+    
+    ism330dlc_status_t resp = device->read_registers(
+        device->device_context,
+        ISM330DLC_ADDR_CTRL7_G,
+        &ctrl7_c_reg_stae,
+        1
+    );
+
+    if (resp != ISM330DLC_SUCCESS) 
+        return resp;
+
+    uint8_t ctrl_c_new_state = ctrl7_c_reg_stae & ~ISM330DLC_MASK_G_HM_MODE;
+    
+    if (mode == ISM330DLC_ACCEL_GYRO_LOW_PERFORMANCE) 
+    {
+        ctrl_c_new_state |= ISM330DLC_MASK_G_HM_MODE;
+    }
+
+    return device->write_registers(
+        device->device_context,
+        ISM330DLC_ADDR_CTRL7_G,
+        &ctrl7_c_reg_stae,
+        1
+    );
+};
+
+ism330dlc_status_t ism330dlc_update_gyro_odr(ism330dlc_t* device, ism330dlc_accel_gyro_odr_t odr);
+ism330dlc_status_t ism330dlc_read_gyro_odr(ism330dlc_t* device);

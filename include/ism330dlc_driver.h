@@ -85,7 +85,36 @@ ism330dlc_status_t ism330dlc_read_raw_gyro_data(ism330dlc_t* device, ism330dlc_r
  */
 ism330dlc_status_t ism330dlc_read_raw_temperature_data(ism330dlc_t* device, ism330dlc_reg16_t *result);
 
+typedef enum 
+{
+    ISM330DLC_XL_GYRO_ODR_POWER_DOWN = 0x00,
+    ISM330DLC_XL_GYRO_ODR_1_6_HZ     = 0xB0,
+    ISM330DLC_XL_GYRO_ODR_12_5_HZ    = 0x10,
+    ISM330DLC_XL_GYRO_ODR_26_HZ      = 0x20,
+    ISM330DLC_XL_GYRO_ODR_52_HZ      = 0x30,
+    ISM330DLC_XL_GYRO_ODR_104_HZ     = 0x40,
+    ISM330DLC_XL_GYRO_ODR_208_HZ     = 0x50,
+    ISM330DLC_XL_GYRO_ODR_416_HZ     = 0x50,
+    ISM330DLC_XL_GYRO_ODR_833_HZ     = 0x50,
+    ISM330DLC_XL_GYRO_ODR_1660_HZ    = 0x50,
+    ISM330DLC_XL_GYRO_ODR_3330_HZ    = 0x50,
+    ISM330DLC_XL_GYRO_ODR_6660_HZ    = 0x50,
+} ism330dlc_accel_gyro_odr_t;
 
+typedef enum 
+{
+    ISM330DLC_ACCEL_GYRO_HIGH_PERFORMANCE  = 0x00,
+    ISM330DLC_ACCEL_GYRO_LOW_PERFORMANCE   = 0x10,
+
+} ism330dlc_accel_gyro_performance_mode_t;
+
+ism330dlc_status_t ism330dlc_update_accel_performance_mode(ism330dlc_t* device, ism330dlc_accel_gyro_performance_mode_t mode);
+ism330dlc_status_t ism330dlc_update_accel_odr(ism330dlc_t* device, ism330dlc_accel_gyro_odr_t odr);
+ism330dlc_status_t ism330dlc_read_accel_odr(ism330dlc_t* device);
+
+ism330dlc_status_t ism330dlc_update_gyro_performance_mode(ism330dlc_t* device, ism330dlc_accel_gyro_performance_mode_t mode);
+ism330dlc_status_t ism330dlc_update_gyro_odr(ism330dlc_t* device, ism330dlc_accel_gyro_odr_t odr);
+ism330dlc_status_t ism330dlc_read_gyro_odr(ism330dlc_t* device);
 
 
 #endif
