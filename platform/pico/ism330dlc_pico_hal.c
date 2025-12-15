@@ -41,12 +41,12 @@ ism330dlc_status_t ism330dlc_pico_i2c_pins_deinit(ism330dlc_pico_i2c_config *con
 };
 
 
-ism330dlc_status_t i2c_read_register(void *handle, uint8_t registerAddress, uint8_t *buffer, size_t length)
+ism330dlc_status_t i2c_read_register(void *handle, uint8_t address, uint8_t *buffer, size_t length)
 {
     ism330dlc_pico_i2c_config *config = (ism330dlc_pico_i2c_config*) handle;
 
     int resp;
-    resp = i2c_write_blocking(config->port, config->i2c_address, &registerAddress, sizeof(registerAddress), true);
+    resp = i2c_write_blocking(config->port, config->i2c_address, &address, sizeof(address), true);
 
     if (resp == PICO_ERROR_GENERIC) {
         return ISM330DLC_ERROR;
@@ -61,12 +61,12 @@ ism330dlc_status_t i2c_read_register(void *handle, uint8_t registerAddress, uint
     return ISM330DLC_SUCCESS;    
 };
 
-ism330dlc_status_t i2c_write_register(void *handle, uint8_t registerAddress, uint8_t *data, size_t length)
+ism330dlc_status_t i2c_write_register(void *handle, uint8_t address, uint8_t *data, size_t length)
 {
     ism330dlc_pico_i2c_config *config = (ism330dlc_pico_i2c_config*) handle;
 
     int resp;
-    resp = i2c_write_blocking(config->port, config->i2c_address, &registerAddress, sizeof(registerAddress), true);
+    resp = i2c_write_blocking(config->port, config->i2c_address, &address, sizeof(address), true);
 
     if (resp == PICO_ERROR_GENERIC) {
         return ISM330DLC_ERROR;
@@ -122,28 +122,51 @@ ism330dlc_status_t ism330dlc_pico_spi_pins_deinit(ism330dlc_pico_spi_config *con
     return ISM330DLC_SUCCESS;
 };
 
-ism330dlc_status_t spi_read_register(void *handle, uint8_t registerAddress, uint8_t *buffer, size_t length)
+ism330dlc_status_t spi_read_register(void *handle, uint8_t address, uint8_t *buffer, size_t length)
 {
-    ism330dlc_pico_spi_config *config = (ism330dlc_pico_i2c_config*) handle;
+    ism330dlc_pico_spi_config *config = (ism330dlc_pico_spi_config*) handle;
     // The MSB is set as 1 indicating a read command
-    uint8_t command = 0x80 | registerAddress; 
+    uint8_t command = 0x80 | address; 
     gpio_put(config->cs_pin, 0);
     
-    spi_write_blocking(config->port, &command, sizeof(command));
-    spi_read_blocking(config->port, 0x00, buffer, length);
+    int written = spi_write_blocking(config->port, &command, sizeof(command));
+    if (written != 1) {
+        gpio_put(config->cs_pin, 1); 
+        return ISM330DLC_ERROR;
+    }
+
+    int read = spi_read_blocking(config->port, 0x00, buffer, length);
+    if (read != length) {
+        gpio_put(config->cs_pin, 1); 
+        return ISM330DLC_ERROR;
+    }
 
     gpio_put(config->cs_pin, 1); 
+
+    return ISM330DLC_SUCCESS;
 };
 
-ism330dlc_status_t spi_write_register(void *handle, uint8_t registerAddress, uint8_t *data, size_t length) 
+ism330dlc_status_t spi_write_register(void *handle, uint8_t address, uint8_t *data, size_t length) 
 {
-    ism330dlc_pico_spi_config *config = (ism330dlc_pico_i2c_config*) handle;
-    uint8_t command = 0x7F | registerAddress; 
+    ism330dlc_pico_spi_config *config = (ism330dlc_pico_spi_config*) handle;
+    // The MSB is set as 0 indicating a write command
+    uint8_t command = 0x7F | address; 
     gpio_put(config->cs_pin, 0);
     
-    spi_write_blocking(config->port, &command, sizeof(command));
-    spi_write_blocking(config->port, data, length);
+    int written = spi_write_blocking(config->port, &command, sizeof(command));
+    if (written != 1) {
+        gpio_put(config->cs_pin, 1); 
+        return ISM330DLC_ERROR;
+    }
+
+    written = spi_write_blocking(config->port, data, length);
+    if (written != length) {
+        gpio_put(config->cs_pin, 1); 
+        return ISM330DLC_ERROR;
+    }
 
     gpio_put(config->cs_pin, 1);
+
+    return ISM330DLC_SUCCESS;
 };
 
