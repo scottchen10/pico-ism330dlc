@@ -1,6 +1,53 @@
 #include "ism330dlc_driver.h"
 #include "ism330dlc_regs.h"
 
+static ism330dlc_status_t ism330dlc_write_register_with_mask(
+    ism330dlc_t* device,
+    uint8_t address,
+    uint8_t reset_mask,
+    uint8_t masked_value
+)
+{
+    uint8_t register_state; 
+    
+    ism330dlc_status_t resp = device->read_registers(
+        device->device_context,
+        address,
+        &register_state,
+        1
+    );
+
+    if (resp != ISM330DLC_SUCCESS) 
+        return resp;
+
+    uint8_t new_register_state = (register_state & ~reset_mask) | masked_value;
+
+    return device->write_registers(
+        device->device_context,
+        address,
+        &new_register_state,
+        1
+    );
+};
+
+static ism330dlc_status_t ism330dlc_read_register_with_mask(
+    ism330dlc_t* device,
+    uint8_t address,
+    uint8_t reset_mask,
+    uint8_t* value
+)
+{    
+    ism330dlc_status_t resp =  device->read_registers(
+        device->device_context,
+        address,
+        value,
+        1
+    );
+
+    (*value) &= ~reset_mask;
+    return resp;
+};
+
 void ism330dlc_init(
     ism330dlc_t *instance, 
     void* device_context, 
@@ -56,63 +103,102 @@ ism330dlc_status_t ism330dlc_read_raw_temperature_data(ism330dlc_t* device, ism3
 
 ism330dlc_status_t ism330dlc_update_accel_performance_mode(ism330dlc_t* device, ism330dlc_accel_gyro_performance_mode_t mode)
 {
-    uint8_t ctrl6_c_reg_state; 
-    
-    ism330dlc_status_t resp = device->read_registers(
-        device->device_context,
+    return ism330dlc_write_register_with_mask(
+        device,
         ISM330DLC_ADDR_CTRL6_C,
-        &ctrl6_c_reg_state,
-        1
-    );
-
-    if (resp != ISM330DLC_SUCCESS) 
-        return resp;
-
-    uint8_t ctrl_c_new_state = ctrl6_c_reg_state & ~ISM330DLC_MASK_XL_HM_MODE;
-    
-    if (mode == ISM330DLC_ACCEL_GYRO_LOW_PERFORMANCE) 
-    {
-        ctrl_c_new_state |= ISM330DLC_MASK_XL_HM_MODE;
-    }
-
-    return device->write_registers(
-        device->device_context,
-        ISM330DLC_ADDR_CTRL6_C,
-        &ctrl_c_new_state,
-        1
+        ISM330DLC_MASK_XL_HM_MODE,
+        (mode == ISM330DLC_ACCEL_GYRO_HIGH_PERFORMANCE) ? 0x00: ISM330DLC_MASK_XL_HM_MODE
     );
 };
-ism330dlc_status_t ism330dlc_update_accel_odr(ism330dlc_t* device, ism330dlc_accel_gyro_odr_t odr);
-ism330dlc_status_t ism330dlc_read_accel_odr(ism330dlc_t* device);
+ism330dlc_status_t ism330dlc_update_accel_odr(ism330dlc_t* device, ism330dlc_accel_gyro_odr_t odr)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_CTRL1_XL,
+        ISM330DLC_MASK_ODR_XL,
+        odr
+    );
+};
 
 ism330dlc_status_t ism330dlc_update_gyro_performance_mode(ism330dlc_t* device, ism330dlc_accel_gyro_performance_mode_t mode)
 {
-    uint8_t ctrl7_c_reg_state; 
-    
-    ism330dlc_status_t resp = device->read_registers(
-        device->device_context,
+    return ism330dlc_write_register_with_mask(
+        device,
         ISM330DLC_ADDR_CTRL7_G,
-        &ctrl7_c_reg_state,
-        1
-    );
-
-    if (resp != ISM330DLC_SUCCESS) 
-        return resp;
-
-    uint8_t ctrl_c_new_state = ctrl7_c_reg_state & ~ISM330DLC_MASK_G_HM_MODE;
-    
-    if (mode == ISM330DLC_ACCEL_GYRO_LOW_PERFORMANCE) 
-    {
-        ctrl_c_new_state |= ISM330DLC_MASK_G_HM_MODE;
-    }
-
-    return device->write_registers(
-        device->device_context,
-        ISM330DLC_ADDR_CTRL7_G,
-        &ctrl_c_new_state,
-        1
+        ISM330DLC_MASK_G_HM_MODE,
+        (mode == ISM330DLC_ACCEL_GYRO_HIGH_PERFORMANCE) ? 0x00: ISM330DLC_MASK_G_HM_MODE
     );
 };
 
-ism330dlc_status_t ism330dlc_update_gyro_odr(ism330dlc_t* device, ism330dlc_accel_gyro_odr_t odr);
-ism330dlc_status_t ism330dlc_read_gyro_odr(ism330dlc_t* device);
+ism330dlc_status_t ism330dlc_update_gyro_odr(ism330dlc_t* device, ism330dlc_accel_gyro_odr_t odr)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_CTRL2_G,
+        ISM330DLC_MASK_ODR_G,
+        odr
+    );    
+};
+
+ism330dlc_status_t ism330dlc_update_accel_full_scale(ism330dlc_t* device, ism330dlc_accel_full_scale_t scale)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_CTRL1_XL,
+        ISM330DLC_MASK_FS_XL,
+        scale
+    );    
+};
+
+ism330dlc_status_t ism330dlc_read_accel_full_scale(ism330dlc_t* device, ism330dlc_accel_full_scale_t* scale) 
+{
+    uint8_t value;
+    
+    ism330dlc_status_t resp = ism330dlc_read_register_with_mask(
+        device,
+        ISM330DLC_ADDR_CTRL1_XL,
+        ISM330DLC_MASK_FS_XL,
+        &value
+    );
+
+    (*scale) = (ism330dlc_accel_full_scale_t) value;
+
+    if (resp == ISM330DLC_SUCCESS)
+        device->last_accel_fs = *scale; 
+
+    return resp;
+};
+
+ism330dlc_status_t ism330dlc_update_gyro_full_scale(ism330dlc_t* device, ism330dlc_gyro_full_scale_t scale)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_CTRL2_G,
+        ISM330DLC_MASK_FS_G,
+        scale
+    );    
+};
+
+ism330dlc_status_t ism330dlc_read_gyro_full_scale(ism330dlc_t* device, ism330dlc_gyro_full_scale_t* scale)
+{
+    uint8_t value;
+    
+    ism330dlc_status_t resp = ism330dlc_read_register_with_mask(
+        device,
+        ISM330DLC_ADDR_CTRL2_G,
+        ISM330DLC_MASK_FS_G,
+        &value
+    );
+
+    (*scale) = (ism330dlc_accel_full_scale_t) value;
+
+    if (resp == ISM330DLC_SUCCESS)
+        device->last_gyro_fs = *scale; 
+
+    return resp;
+};
+
+
+
+
+
