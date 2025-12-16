@@ -1,5 +1,4 @@
 #include "ism330dlc_driver.h"
-#include "hardware/i2c.h"
 #include "ism330dlc_regs.h"
 
 void ism330dlc_init(

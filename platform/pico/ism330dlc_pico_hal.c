@@ -1,4 +1,5 @@
 #include "ism330dlc_pico_hal.h"
+#include "hardware/gpio.h"
 
 ism330dlc_status_t ism330dlc_pico_i2c_bus_init(ism330dlc_pico_i2c_config *config) 
 {

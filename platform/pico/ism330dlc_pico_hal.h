@@ -2,9 +2,8 @@
 #define ISM330DLC_PICO_HAL
 
 #include "ism330dlc_driver.h"
-#include "hardware/i2c.h"
-#include "hardware/gpio.h"
 #include "hardware/spi.h"
+#include "hardware/i2c.h"
 
 typedef struct
 {
