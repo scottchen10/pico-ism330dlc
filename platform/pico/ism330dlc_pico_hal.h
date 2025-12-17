@@ -23,7 +23,7 @@ ism330dlc_status_t ism330dlc_pico_i2c_bus_deinit(const ism330dlc_pico_i2c_config
 ism330dlc_status_t ism330dlc_pico_i2c_pins_deinit(const ism330dlc_pico_i2c_config config);
 
 ism330dlc_status_t ism330dlc_i2c_read_registers(void *handle, uint8_t address, uint8_t *buffer, size_t length);
-ism330dlc_status_t ism330dlc_i2c_write_registers(void *handle, uint8_t address, uint8_t *data, size_t length) ;
+ism330dlc_status_t ism330dlc_i2c_write_registers(void *handle, uint8_t address, uint8_t *data, size_t length);
 
 typedef struct
 {
@@ -41,6 +41,6 @@ ism330dlc_status_t ism330dlc_pico_spi4_bus_deinit(const ism330dlc_pico_spi4_conf
 ism330dlc_status_t ism330dlc_pico_spi4_pins_deinit(const ism330dlc_pico_spi4_config config);
 
 ism330dlc_status_t ism330dlc_spi4_read_registers(void *handle, uint8_t address, uint8_t *buffer, size_t length);
-ism330dlc_status_t ism330dlc_spi4_write_registers(void *handle, uint8_t address, uint8_t *data, size_t length) ;
+ism330dlc_status_t ism330dlc_spi4_write_registers(void *handle, uint8_t address, uint8_t *data, size_t length);
 
 #endif

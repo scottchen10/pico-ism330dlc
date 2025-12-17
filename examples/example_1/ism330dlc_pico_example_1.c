@@ -1,6 +1,12 @@
 #include "ism330dlc_pico_hal.h"
 
-void main() {
+void complementary_filter() 
+{
+
+};
+
+void main() 
+{
     const ism330dlc_pico_i2c_config i2c_config = {
         .port        = i2c_default,
         .i2c_address = ISM330DLC_I2C_ADDR0,
