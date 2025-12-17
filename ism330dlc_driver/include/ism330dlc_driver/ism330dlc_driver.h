@@ -23,6 +23,23 @@ typedef enum
     ISM330DLC_I2C_ADDR1 = 0x6B
 } ism330dlc_i2c_address_t;
 
+typedef enum 
+{
+    ISM330DLC_ACCEL_FULL_SCALE_2G  = 0x00,
+    ISM330DLC_ACCEL_FULL_SCALE_16G = 0x04,
+    ISM330DLC_ACCEL_FULL_SCALE_4G  = 0x08,
+    ISM330DLC_ACCEL_FULL_SCALE_8G  = 0x0C,
+} ism330dlc_accel_full_scale_t;
+
+typedef enum 
+{
+    ISM330DLC_GYRO_FULL_SCALE_125DPS   = 0x02,
+    ISM330DLC_GYRO_FULL_SCALE_250DPS   = 0x00,
+    ISM330DLC_GYRO_FULL_SCALE_500DPS   = 0x04,
+    ISM330DLC_GYRO_FULL_SCALE_1000DPS  = 0x08,
+    ISM330DLC_GYRO_FULL_SCALE_2000DPS  = 0x0C,
+} ism330dlc_gyro_full_scale_t;
+
 typedef struct
 {
     void* device_context;
@@ -32,11 +49,17 @@ typedef struct
     ism330dlc_status_t (*write_registers)(void *device_context, uint8_t address, uint8_t *data, size_t length);
 } ism330dlc_t;
 
-void ism330dlc_init(
+typedef enum
+{
+    ISM330DLC_INIT_SUCCESS = 0x00,
+    ISM330DLC_INIT_FAIL_INVALID_BUS,
+    ISM330DLC_INIT_FAIL_SPI3_DISABLED,
+} ism330dlc_init_status;
+
+ism330dlc_init_status ism330dlc_init(
     ism330dlc_t *instance, 
     void* device_context, 
-    ism330dlc_status_t (*read_registers)(void *device_context, uint8_t address, uint8_t *buffer, size_t length),
-    ism330dlc_status_t (*write_registers)(void *device_context, uint8_t address, uint8_t *data, size_t length)
+    ism330dlc_bus_type_t bus_type
 );
 
 /**
@@ -157,14 +180,6 @@ ism330dlc_status_t ism330dlc_update_gyro_performance_mode(ism330dlc_t* device, i
  */
 ism330dlc_status_t ism330dlc_update_gyro_odr(ism330dlc_t* device, ism330dlc_accel_gyro_odr_t odr);
 
-typedef enum 
-{
-    ISM330DLC_ACCEL_FULL_SCALE_2G  = 0x00,
-    ISM330DLC_ACCEL_FULL_SCALE_16G = 0x04,
-    ISM330DLC_ACCEL_FULL_SCALE_4G  = 0x08,
-    ISM330DLC_ACCEL_FULL_SCALE_8G  = 0x0C,
-} ism330dlc_accel_full_scale_t;
-
 /**
  * @brief Updates the accelerometer measurement scale.
  *
@@ -184,15 +199,6 @@ ism330dlc_status_t ism330dlc_update_accel_full_scale(ism330dlc_t* device, ism330
  * @return ISM330DLC status code.
  */
 ism330dlc_status_t ism330dlc_read_accel_full_scale(ism330dlc_t* device, ism330dlc_accel_full_scale_t* scale);
-
-typedef enum 
-{
-    ISM330DLC_GYRO_FULL_SCALE_125DPS   = 0x02,
-    ISM330DLC_GYRO_FULL_SCALE_250DPS   = 0x00,
-    ISM330DLC_GYRO_FULL_SCALE_500DPS   = 0x04,
-    ISM330DLC_GYRO_FULL_SCALE_1000DPS  = 0x08,
-    ISM330DLC_GYRO_FULL_SCALE_2000DPS  = 0x0C,
-} ism330dlc_gyro_full_scale_t;
 
 /**
  * @brief Updates the gyroscope measurement scale.

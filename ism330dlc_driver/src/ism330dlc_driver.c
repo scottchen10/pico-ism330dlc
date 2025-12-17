@@ -1,5 +1,13 @@
-#include "ism330dlc_driver.h"
-#include "ism330dlc_regs.h"
+#include "ism330dlc_driver/ism330dlc_driver.h"
+#include "ism330dlc_driver/ism330dlc_regs.h"
+
+ism330dlc_status_t ism330dlc_i2c_read_registers(void *handle, uint8_t address, uint8_t *buffer, size_t length);
+ism330dlc_status_t ism330dlc_i2c_write_registers(void *handle, uint8_t address, uint8_t *data, size_t length);
+ism330dlc_status_t ism330dlc_spi3_read_registers(void *handle, uint8_t address, uint8_t *buffer, size_t length);
+ism330dlc_status_t ism330dlc_spi3_write_registers(void *handle, uint8_t address, uint8_t *data, size_t length) ;
+ism330dlc_status_t ism330dlc_spi4_read_registers(void *handle, uint8_t address, uint8_t *buffer, size_t length);
+ism330dlc_status_t ism330dlc_spi4_write_registers(void *handle, uint8_t address, uint8_t *data, size_t length) ;
+
 
 static ism330dlc_status_t ism330dlc_write_register_with_mask(
     ism330dlc_t* device,
@@ -48,16 +56,39 @@ static ism330dlc_status_t ism330dlc_read_register_with_mask(
     return resp;
 };
 
-void ism330dlc_init(
+ism330dlc_init_status ism330dlc_init(
     ism330dlc_t *instance, 
     void* device_context, 
-    ism330dlc_status_t (*read_registers)(void *device_context, uint8_t registerAddress, uint8_t *buffer, size_t length),
-    ism330dlc_status_t (*write_registers)(void *device_context, uint8_t registerAddress, uint8_t *data, size_t length)
+    ism330dlc_bus_type_t bus_type
 ) 
 {
     instance->device_context = device_context;
-    instance->read_registers = read_registers;
-    instance->write_registers = write_registers;
+    instance->last_gyro_fs = ISM330DLC_GYRO_FULL_SCALE_250DPS;
+    instance->last_accel_fs = ISM330DLC_ACCEL_FULL_SCALE_2G;
+
+    switch (bus_type)
+    {
+    case ISM330DLC_BUS_I2C:
+        instance->read_registers  = &ism330dlc_i2c_write_registers;
+        instance->write_registers = &ism330dlc_i2c_read_registers;
+
+        break;
+    case ISM330DLC_BUS_SPI4:
+        instance->read_registers  = &ism330dlc_spi4_write_registers;
+        instance->write_registers = &ism330dlc_spi4_read_registers;
+        break;
+    case ISM330DLC_BUS_SPI3:
+        #ifdef ISM330DLC_SPI3_DISABLED
+        return ISM330DLC_INIT_FAIL_SPI3_DISABLED;
+        #endif
+        instance->read_registers  = &ism330dlc_spi3_write_registers;
+        instance->write_registers = &ism330dlc_spi3_read_registers;
+        break;
+    default:
+        return ISM330DLC_INIT_FAIL_INVALID_BUS;
+    }
+
+    return ISM330DLC_INIT_SUCCESS;
 };
 
 ism330dlc_status_t ism330dlc_read_who_am_i(ism330dlc_t* device, uint8_t* result) 

@@ -18,6 +18,6 @@ set(CMAKE_CXX_STANDARD 17)
 
 pico_sdk_init()
 
-add_subdirectory(driver)
+add_subdirectory(ism330dlc_driver)
 add_subdirectory(platform/pico)
-add_subdirectory(examples/pico/example_1)
+add_subdirectory(examples/example_1)
