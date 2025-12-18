@@ -1,6 +1,8 @@
 #include "ism330dlc_driver/ism330dlc_driver.h"
 #include "ism330dlc_driver/ism330dlc_regs.h"
 
+#include "math.h"
+
 ism330dlc_status_t ism330dlc_i2c_read_registers(void *handle, uint8_t address, uint8_t *buffer, size_t length);
 ism330dlc_status_t ism330dlc_i2c_write_registers(void *handle, uint8_t address, uint8_t *data, size_t length);
 ism330dlc_status_t ism330dlc_spi3_read_registers(void *handle, uint8_t address, uint8_t *buffer, size_t length);
@@ -60,8 +62,8 @@ ism330dlc_init_status ism330dlc_init(
     ism330dlc_bus_type_t bus_type)
 {
     instance->device_context = device_context;
-    instance->last_gyro_fs = ISM330DLC_GYRO_FULL_SCALE_250DPS;
-    instance->last_accel_fs = ISM330DLC_ACCEL_FULL_SCALE_2G;
+    instance->last_gyro_fs = ISM330DLC_GYRO_FS_250DPS;
+    instance->last_accel_fs = ISM330DLC_ACCEL_FS_2G;
 
     switch (bus_type)
     {
@@ -103,7 +105,7 @@ ism330dlc_status_t ism330dlc_read_raw_accel_data(ism330dlc_t *device, ism330dlc_
     return device->read_registers(
         device->device_context,
         ISM330DLC_ADDR_OUTX_L_XL,
-        result->values,
+        result->bytes,
         6
     );
     return ISM330DLC_SUCCESS;
@@ -114,7 +116,7 @@ ism330dlc_status_t ism330dlc_read_raw_gyro_data(ism330dlc_t *device, ism330dlc_r
     return device->read_registers(
         device->device_context,
         ISM330DLC_ADDR_OUTX_L_G,
-        result->values,
+        result->bytes,
         6
     );
     return ISM330DLC_SUCCESS;
@@ -125,7 +127,7 @@ ism330dlc_status_t ism330dlc_read_raw_temperature_data(ism330dlc_t *device, ism3
     return device->read_registers(
         device->device_context,
         ISM330DLC_ADDR_OUT_TEMP_L,
-        result->u8,
+        result->bytes,
         2
     );
 };
@@ -225,4 +227,101 @@ ism330dlc_status_t ism330dlc_read_gyro_full_scale(ism330dlc_t *device, ism330dlc
         device->last_gyro_fs = *scale;
 
     return resp;
+};
+
+
+static inline float ism330dlc_convert_raw_accel_to_g(int16_t raw_accel, ism330dlc_accel_full_scale_t scale)
+{
+    switch (scale)
+    {
+    case ISM330DLC_ACCEL_FS_2G:
+        return raw_accel * ISM330DLC_SENS_ACCEL_FS_2G;
+    case ISM330DLC_ACCEL_FS_4G:
+        return raw_accel * ISM330DLC_SENS_ACCEL_FS_4G;
+    case ISM330DLC_ACCEL_FS_8G:
+        return raw_accel * ISM330DLC_SENS_ACCEL_FS_8G;
+    case ISM330DLC_ACCEL_FS_16G:
+        return raw_accel * ISM330DLC_SENS_ACCEL_FS_16G;
+    }
+
+    return NAN;
+};
+
+static inline float ism330dlc_convert_raw_accel_to_mps2(int16_t raw_accel, ism330dlc_accel_full_scale_t scale)
+{
+    return ism330dlc_convert_raw_accel_to_g(raw_accel, scale) * ISM330DLC_CONV_G_TO_MPS;
+};
+
+static inline float ism330dlc_convert_raw_gyro_to_dps(int16_t raw_gyro, ism330dlc_gyro_full_scale_t scale) 
+{
+    switch (scale)
+    {
+    case ISM330DLC_GYRO_FS_125DPS:
+        return raw_gyro * ISM330DLC_SENS_GYRO_FS_125DPS;
+    case ISM330DLC_GYRO_FS_250DPS:
+        return raw_gyro * ISM330DLC_SENS_GYRO_FS_250DPS;
+    case ISM330DLC_GYRO_FS_500DPS:
+        return raw_gyro * ISM330DLC_SENS_GYRO_FS_500DPS;
+    case ISM330DLC_GYRO_FS_1000DPS:
+        return raw_gyro * ISM330DLC_SENS_GYRO_FS_1000DPS;
+    case ISM330DLC_GYRO_FS_2000DPS:
+        return raw_gyro * ISM330DLC_SENS_GYRO_FS_2000DPS;
+    }
+
+    return NAN;    
+};
+
+static inline float ism330dlc_convert_raw_gyro_to_mps(int16_t raw_gyro, ism330dlc_gyro_full_scale_t scale)
+{
+    return ism330dlc_convert_raw_gyro_to_dps(raw_gyro, scale) * ISM330DLC_CONV_DPS_TO_RPS;
+};
+
+
+void ism330dlc_convert_raw_accel_xyz_to_g(
+    ism330dlc_accel_full_scale_t scale, 
+    const ism330dlc_raw_xyz_t *raw_values, 
+    ism330dlc_accel_t *accel_g
+)
+{
+    accel_g->x = ism330dlc_convert_raw_accel_to_g(raw_values->axes[0], scale);
+    accel_g->y = ism330dlc_convert_raw_accel_to_g(raw_values->axes[1], scale);
+    accel_g->z = ism330dlc_convert_raw_accel_to_g(raw_values->axes[2], scale);
+};
+
+void ism330dlc_convert_raw_accel_xyz_to_mps2(
+    ism330dlc_accel_full_scale_t scale, 
+    const ism330dlc_raw_xyz_t *raw_values, 
+    ism330dlc_accel_t *accel_mps
+)
+{
+    accel_mps->x = ism330dlc_convert_raw_accel_to_mps2(raw_values->axes[0], scale);
+    accel_mps->y = ism330dlc_convert_raw_accel_to_mps2(raw_values->axes[1], scale);
+    accel_mps->z = ism330dlc_convert_raw_accel_to_mps2(raw_values->axes[2], scale);    
+};
+
+void ism330dlc_convert_raw_gyro_xyz_to_dps(
+    ism330dlc_gyro_full_scale_t scale, 
+    const ism330dlc_raw_xyz_t *raw_values, 
+    ism330dlc_gyro_t *gyro_dps
+)
+{
+    gyro_dps->x = ism330dlc_convert_raw_gyro_to_dps(raw_values->axes[0], scale);
+    gyro_dps->y = ism330dlc_convert_raw_gyro_to_dps(raw_values->axes[1], scale);
+    gyro_dps->z = ism330dlc_convert_raw_gyro_to_dps(raw_values->axes[2], scale);        
+};
+
+void ism330dlc_convert_raw_gyro_xyz_to_rps(
+    ism330dlc_gyro_full_scale_t scale, 
+    const ism330dlc_raw_xyz_t *raw_values, 
+    ism330dlc_gyro_t *gyro_rps
+)
+{
+    gyro_rps->x = ism330dlc_convert_raw_gyro_to_rps(raw_values->axes[0], scale);
+    gyro_rps->y = ism330dlc_convert_raw_gyro_to_rps(raw_values->axes[1], scale);
+    gyro_rps->z = ism330dlc_convert_raw_gyro_to_rps(raw_values->axes[2], scale);        
+};
+
+float ism330dlc_convert_raw_temp_to_celcius(int16_t raw_temp)
+{
+    return raw_temp * ISM330DLC_SENS_TEMP;
 };

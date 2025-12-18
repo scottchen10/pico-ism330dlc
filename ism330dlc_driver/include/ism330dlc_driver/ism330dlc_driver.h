@@ -25,19 +25,19 @@ typedef enum
 
 typedef enum
 {
-    ISM330DLC_ACCEL_FULL_SCALE_2G  = 0x00,
-    ISM330DLC_ACCEL_FULL_SCALE_16G = 0x04,
-    ISM330DLC_ACCEL_FULL_SCALE_4G  = 0x08,
-    ISM330DLC_ACCEL_FULL_SCALE_8G  = 0x0C,
+    ISM330DLC_ACCEL_FS_2G  = 0x00,
+    ISM330DLC_ACCEL_FS_16G = 0x04,
+    ISM330DLC_ACCEL_FS_4G  = 0x08,
+    ISM330DLC_ACCEL_FS_8G  = 0x0C,
 } ism330dlc_accel_full_scale_t;
 
 typedef enum
 {
-    ISM330DLC_GYRO_FULL_SCALE_125DPS  = 0x02,
-    ISM330DLC_GYRO_FULL_SCALE_250DPS  = 0x00,
-    ISM330DLC_GYRO_FULL_SCALE_500DPS  = 0x04,
-    ISM330DLC_GYRO_FULL_SCALE_1000DPS = 0x08,
-    ISM330DLC_GYRO_FULL_SCALE_2000DPS = 0x0C,
+    ISM330DLC_GYRO_FS_125DPS  = 0x02,
+    ISM330DLC_GYRO_FS_250DPS  = 0x00,
+    ISM330DLC_GYRO_FS_500DPS  = 0x04,
+    ISM330DLC_GYRO_FS_1000DPS = 0x08,
+    ISM330DLC_GYRO_FS_2000DPS = 0x0C,
 } ism330dlc_gyro_full_scale_t;
 
 typedef struct
@@ -74,19 +74,14 @@ ism330dlc_status_t ism330dlc_read_who_am_i(ism330dlc_t *device, uint8_t *result)
 
 typedef union
 {
-    uint16_t u16;
-    uint8_t u8[2];
+    int16_t u16;
+    uint8_t bytes[2];
 } ism330dlc_reg16_t;
 
 typedef union
 {
-    struct
-    {
-        uint16_t x;
-        uint16_t y;
-        uint16_t z;
-    } axis;
-    uint8_t values[6];
+    int16_t axes[3];
+    uint8_t bytes[6];
 } ism330dlc_raw_xyz_t;
 
 /**
@@ -223,4 +218,60 @@ ism330dlc_status_t ism330dlc_update_gyro_full_scale(ism330dlc_t *device, ism330d
  */
 ism330dlc_status_t ism330dlc_read_gyro_full_scale(ism330dlc_t *device, ism330dlc_gyro_full_scale_t *scale);
 
+typedef struct 
+{
+    float x, y, z;
+} ism330dlc_accel_t;
+
+/**
+ * @brief Converts the raw accelerometer data into units of g based on the provided scale
+ *
+ * @param scale The measurement scale
+ * @param raw_values The raw measurement data
+ * @param accel_g Pointer to where the converted values in g will be stored
+ *
+ */
+void ism330dlc_convert_raw_accel_xyz_to_g(ism330dlc_accel_full_scale_t scale, const ism330dlc_raw_xyz_t *raw_values, ism330dlc_accel_t *accel_g);
+
+/**
+ * @brief Converts the raw accelerometer data into meters per second squared based on the provided scale
+ *
+ * @param scale The measurement scale
+ * @param raw_values Pointer to the raw measurement data
+ * @param accel_mps Pointer to where the converted values in m/s/s in will be stored
+ */
+void ism330dlc_convert_raw_accel_xyz_to_mps2(ism330dlc_accel_full_scale_t scale, const ism330dlc_raw_xyz_t *raw_values, ism330dlc_accel_t *accel_mps);
+
+typedef struct 
+{
+    float x, y, z;
+} ism330dlc_gyro_t;
+
+/**
+ * @brief Converts the raw gyroscope data into degrees per second based on the provided scale
+ *
+ * @param scale The measurement scale
+ * @param raw_values Pointer to the raw measurement data
+ * @param gyro_dps Pointer to where the converted values in dps will be stored
+ */
+void ism330dlc_convert_raw_gyro_xyz_to_dps(ism330dlc_gyro_full_scale_t scale, const ism330dlc_raw_xyz_t *raw_values, ism330dlc_gyro_t *gyro_dps);
+
+/**
+ * @brief Converts the raw gyroscope data into radians per second based on the provided scale
+ *
+ * @param scale The measurement scale
+ * @param raw_values Pointer to the raw measurement data
+ * @param gyro_rps Pointer to where the converted values in rad/s will be stored
+ */
+void ism330dlc_convert_raw_gyro_xyz_to_rps(ism330dlc_gyro_full_scale_t scale, const ism330dlc_raw_xyz_t *raw_values, ism330dlc_gyro_t *gyro_rps);
+
+/**
+ * @brief Converts the raw temperature data to degrees celcius
+ *
+ * @param temp The raw temperature data
+ * @return The temperature in degrees celcius
+ */
+float ism330dlc_convert_raw_temp_to_celcius(int16_t temp);
+
 #endif
+
