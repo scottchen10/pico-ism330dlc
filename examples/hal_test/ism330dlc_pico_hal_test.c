@@ -39,26 +39,33 @@ int main(void)
     {
         printf("Silently failed to read WHO_AM_I \n", who_am_i);       
     }
-    else if (who_am_i != 0x6A || who_am_i != 0x6B)
+    else if (who_am_i != 0x6A && who_am_i != 0x6B)
     {
         printf("Invalid data received from WHO_AM_I: 0x%02X \n", who_am_i);
     }
-
+    else 
+    {
+        printf("Successfully read WHO_AM_I: 0x%02X \n", who_am_i);
+    }
 
     // Verify writing to registers work
 
-    ism330dlc_accel_full_scale_t stored_scale;
+    ism330dlc_accel_full_scale_t stored_scale = 0x99;
     resp = ism330dlc_update_accel_full_scale(&ism330dlc_sensor, ISM330DLC_ACCEL_FS_16G);
     if (resp != ISM330DLC_SUCCESS)
         printf("Failed to update accelerometer full scale \n");
 
-    resp =  sm330dlc_read_accel_full_scale(&ism330dlc_sensor, &stored_scale);
+    resp =  ism330dlc_read_accel_full_scale(&ism330dlc_sensor, &stored_scale);
     if (resp != ISM330DLC_SUCCESS)
         printf("Failed to read accelerometer full scale \n");
 
     if (stored_scale != ISM330DLC_ACCEL_FS_16G)
     {
         printf("Failed to update the stored scale: 0x%02X \n", (uint8_t)stored_scale);
+    } 
+    else 
+    {
+        printf("Successfully updated the full scale \n");
     }
 
 
@@ -66,7 +73,7 @@ int main(void)
     uint8_t result_reg = 0x11;
 
     resp = ism330dlc_sensor.write_registers(
-        &ism330dlc_sensor, 
+        &i2c_config, 
         ISM330DLC_ADDR_CTRL1_XL,
         &target_reg,
         1
@@ -74,7 +81,7 @@ int main(void)
     if (resp != ISM330DLC_SUCCESS)
         printf("Failed to write to CTRL1_XL \n");
     resp = ism330dlc_sensor.read_registers(
-        &ism330dlc_sensor, 
+        &i2c_config, 
         ISM330DLC_ADDR_CTRL1_XL,
         &result_reg,
         1
@@ -84,7 +91,11 @@ int main(void)
 
     if (result_reg != target_reg)
     {
-        printf("Failed to update the stored scale: 0x%02X \n", (uint8_t)result_reg);
+        printf("Failed to update CTRL1_XL: 0x%02X \n", (uint8_t)result_reg);
+    } 
+    else 
+    {
+        printf("Successfully wrote to CTRL1_XL: 0x%02X \n", (uint8_t)result_reg);
     }
 
     return 0;

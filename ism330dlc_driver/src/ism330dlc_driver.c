@@ -34,7 +34,7 @@ static ism330dlc_status_t ism330dlc_write_register_with_mask(
 static ism330dlc_status_t ism330dlc_read_register_with_mask(
     ism330dlc_t *device,
     uint8_t address,
-    uint8_t reset_mask,
+    uint8_t mask,
     uint8_t *value
 )
 {
@@ -45,7 +45,8 @@ static ism330dlc_status_t ism330dlc_read_register_with_mask(
         1
     );
 
-    (*value) &= ~reset_mask;
+    (*value) &= mask;
+
     return resp;
 };
 
@@ -318,5 +319,5 @@ void ism330dlc_convert_raw_gyro_xyz_to_rps(
 
 float ism330dlc_convert_raw_temp_to_celcius(int16_t raw_temp)
 {
-    return raw_temp * ISM330DLC_SENS_TEMP;
+    return ISM330DLC_TEMPERATURE_OFFSET + raw_temp * ISM330DLC_SENS_TEMP;
 };

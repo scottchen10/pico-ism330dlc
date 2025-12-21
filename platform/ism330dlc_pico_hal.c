@@ -37,11 +37,11 @@ ism330dlc_status_t ism330dlc_pico_i2c_pins_deinit(const ism330dlc_pico_i2c_confi
     return ISM330DLC_SUCCESS;
 }
 
-ism330dlc_status_t ism330dlc_i2c_read_registers(void *handle, uint8_t address, uint8_t *buffer, size_t length)
+ism330dlc_status_t ism330dlc_i2c_read_registers(void *handle, uint8_t register_addr, uint8_t *buffer, size_t length)
 {
     ism330dlc_pico_i2c_config *config = (ism330dlc_pico_i2c_config *)handle;
     int resp;
-    resp = i2c_write_blocking(config->port, config->i2c_address, &address, sizeof(address), true);
+    resp = i2c_write_blocking(config->port, config->i2c_address, &register_addr, sizeof(register_addr), true);
 
     if (resp == PICO_ERROR_GENERIC)
         return ISM330DLC_ERROR;
@@ -54,17 +54,19 @@ ism330dlc_status_t ism330dlc_i2c_read_registers(void *handle, uint8_t address, u
     return ISM330DLC_SUCCESS;
 };
 
-ism330dlc_status_t ism330dlc_i2c_write_registers(void *handle, uint8_t address, uint8_t *data, size_t length)
+ism330dlc_status_t ism330dlc_i2c_write_registers(void *handle, uint8_t register_addr, uint8_t *data, size_t length)
 {
     ism330dlc_pico_i2c_config *config = (ism330dlc_pico_i2c_config *)handle;
+    uint8_t buffer_len = length + 1;
+    uint8_t buffer[buffer_len];
+    buffer[0] = register_addr;
+    for (uint8_t index = 0; index < length; index++)
+    {
+        buffer[index + 1] = data[index];
+    }
 
     int resp;
-    resp = i2c_write_blocking(config->port, config->i2c_address, &address, sizeof(address), true);
-
-    if (resp == PICO_ERROR_GENERIC)
-        return ISM330DLC_ERROR;
-
-    resp = i2c_write_blocking(config->port, config->i2c_address, data, length, false);
+    resp = i2c_write_blocking(config->port, config->i2c_address, buffer, buffer_len, true);
 
     if (resp == PICO_ERROR_GENERIC)
         return ISM330DLC_ERROR;

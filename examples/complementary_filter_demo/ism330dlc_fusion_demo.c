@@ -94,7 +94,7 @@ void main()
 
         printf("Gyroscope Data     : [ %.3f, %.3f, %.3f ] rad/s \n", gyro_data.x, gyro_data.y, gyro_data.z);
         printf("Accelerometer Data : [ %.3f, %.3f, %.3f ] m/s \n", accel_data.x, accel_data.y, accel_data.z);
-        printf("Temperature        :   %.3f           Kelvin \n", temp);
+        printf("Temperature        :   %.3f           Celcius \n", temp);
 
         sleep_ms(500);
     };
