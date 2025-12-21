@@ -3,13 +3,6 @@
 
 #include "math.h"
 
-ism330dlc_status_t ism330dlc_i2c_read_registers(void *handle, uint8_t address, uint8_t *buffer, size_t length);
-ism330dlc_status_t ism330dlc_i2c_write_registers(void *handle, uint8_t address, uint8_t *data, size_t length);
-ism330dlc_status_t ism330dlc_spi3_read_registers(void *handle, uint8_t address, uint8_t *buffer, size_t length);
-ism330dlc_status_t ism330dlc_spi3_write_registers(void *handle, uint8_t address, uint8_t *data, size_t length);
-ism330dlc_status_t ism330dlc_spi4_read_registers(void *handle, uint8_t address, uint8_t *buffer, size_t length);
-ism330dlc_status_t ism330dlc_spi4_write_registers(void *handle, uint8_t address, uint8_t *data, size_t length);
-
 static ism330dlc_status_t ism330dlc_write_register_with_mask(
     ism330dlc_t *device,
     uint8_t address,
@@ -68,8 +61,8 @@ ism330dlc_init_status ism330dlc_init(
     switch (bus_type)
     {
     case ISM330DLC_BUS_I2C:
-        instance->read_registers = &ism330dlc_i2c_write_registers;
-        instance->write_registers = &ism330dlc_i2c_read_registers;
+        instance->read_registers = &ism330dlc_i2c_read_registers;
+        instance->write_registers = &ism330dlc_i2c_write_registers;
 
         break;
     case ISM330DLC_BUS_SPI4:
@@ -79,10 +72,12 @@ ism330dlc_init_status ism330dlc_init(
     case ISM330DLC_BUS_SPI3:
 #ifdef ISM330DLC_SPI3_DISABLED
         return ISM330DLC_INIT_FAIL_SPI3_DISABLED;
-#endif
+#endif  
+#ifndef ISM330DLC_SPI3_DISABLED 
         instance->read_registers = &ism330dlc_spi3_write_registers;
         instance->write_registers = &ism330dlc_spi3_read_registers;
         break;
+#endif
     default:
         return ISM330DLC_INIT_FAIL_INVALID_BUS;
     }
@@ -271,7 +266,7 @@ static inline float ism330dlc_convert_raw_gyro_to_dps(int16_t raw_gyro, ism330dl
     return NAN;    
 };
 
-static inline float ism330dlc_convert_raw_gyro_to_mps(int16_t raw_gyro, ism330dlc_gyro_full_scale_t scale)
+static inline float ism330dlc_convert_raw_gyro_to_rps(int16_t raw_gyro, ism330dlc_gyro_full_scale_t scale)
 {
     return ism330dlc_convert_raw_gyro_to_dps(raw_gyro, scale) * ISM330DLC_CONV_DPS_TO_RPS;
 };
@@ -315,7 +310,7 @@ void ism330dlc_convert_raw_gyro_xyz_to_rps(
     const ism330dlc_raw_xyz_t *raw_values, 
     ism330dlc_gyro_t *gyro_rps
 )
-{
+{   
     gyro_rps->x = ism330dlc_convert_raw_gyro_to_rps(raw_values->axes[0], scale);
     gyro_rps->y = ism330dlc_convert_raw_gyro_to_rps(raw_values->axes[1], scale);
     gyro_rps->z = ism330dlc_convert_raw_gyro_to_rps(raw_values->axes[2], scale);        
