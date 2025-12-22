@@ -29,7 +29,7 @@ int main(void)
         &handle,
         ISM330DLC_BUS_I2C
     );
-#elif SPI4_TEST 
+#elifdef SPI4_TEST 
     ism330dlc_pico_spi4_config handle = {
         .port        = spi_default,
         .baudrate    = 1000000,
