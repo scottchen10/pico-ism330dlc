@@ -3,12 +3,15 @@
 #include "pico/stdlib.h"
 #include "stdio.h"
 
+#define SPI4_TEST
+
 int main(void)
 {
     stdio_init_all();
     sleep_ms(3000);
 
-    ism330dlc_pico_i2c_config i2c_config = {
+#ifdef I2C_TEST
+    ism330dlc_pico_i2c_config handle = {
         .port        = i2c_default,
         .i2c_address = ISM330DLC_I2C_ADDR0,
         .baudrate    = 400000,
@@ -17,15 +20,37 @@ int main(void)
         .cs_pin      = 2
     };
 
-    ism330dlc_pico_i2c_pins_init(i2c_config);
-    ism330dlc_pico_i2c_bus_init(i2c_config);
+    ism330dlc_pico_i2c_pins_init(handle);
+    ism330dlc_pico_i2c_bus_init(handle);
 
     ism330dlc_t ism330dlc_sensor;
     ism330dlc_init(
         &ism330dlc_sensor,
-        &i2c_config,
+        &handle,
         ISM330DLC_BUS_I2C
     );
+#elif SPI4_TEST 
+    ism330dlc_pico_spi4_config handle = {
+        .port        = spi_default,
+        .baudrate    = 1000000,
+        .sdo_pin     = 0,
+        .sdi_pin     = 3,
+        .scl_pin     = 2,
+        .cs_pin      = 1
+    };
+
+    ism330dlc_pico_spi4_pins_init(handle);
+    ism330dlc_pico_spi4_bus_init(handle);
+
+    ism330dlc_t ism330dlc_sensor;
+    ism330dlc_init(
+        &ism330dlc_sensor,
+        &handle,
+        ISM330DLC_BUS_SPI4
+    );
+
+#endif
+
 
     // Verify reading registers work
 
@@ -73,7 +98,7 @@ int main(void)
     uint8_t result_reg = 0x11;
 
     resp = ism330dlc_sensor.write_registers(
-        &i2c_config, 
+        &ism330dlc_sensor.device_context, 
         ISM330DLC_ADDR_CTRL1_XL,
         &target_reg,
         1
@@ -81,7 +106,7 @@ int main(void)
     if (resp != ISM330DLC_SUCCESS)
         printf("Failed to write to CTRL1_XL \n");
     resp = ism330dlc_sensor.read_registers(
-        &i2c_config, 
+        &ism330dlc_sensor.device_context, 
         ISM330DLC_ADDR_CTRL1_XL,
         &result_reg,
         1
