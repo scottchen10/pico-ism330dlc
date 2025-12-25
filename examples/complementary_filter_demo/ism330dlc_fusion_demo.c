@@ -2,41 +2,93 @@
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include <math.h>
+#include "external/Quaternion/Quaternion.h"
 
-
-#define COMPLEMENTARY_FILTER_GYRO_WEIGHT 0.98f
-#define COMPLEMENTARY_FILTER_ACCEL_WEIGHT (1 - COMPLEMENTARY_FILTER_GYRO_WEIGHT)
+#define COMPLEMENTARY_FILTER_ACCEL_WEIGHT 0.02f
+#define RAD_TO_DEG_CONVERSION 57.2958f
 #define US_TO_S_CONVERSION (1.0f/1000000.0f)
 #define RAD_TO_DEG_CONVERSION 57.2958f
-/**
- * Represents the orientation using Trait-Bryan angles
- * Convention: Z-Y-X (Yaw, Pitch then roll)
- */
-typedef struct 
-{
-    float roll;
-    float pitch;
-    float yaw;
-} euler_angles_t;
 
+
+/**
+ * Quaternion math based on the following paper
+ * Valenti, R. G., Dryanovski, I., & Xiao, J. (2015). Keeping a Good Attitude: A Quaternion-Based Orientation Filter for IMUs and MARGs. Sensors, 15(8), 19302-19330. https://doi.org/10.3390/s150819302
+ * See Section 5.21 for more details
+ */
+void calculate_accel_quaternion_estimate(ism330dlc_accel_t *accel_measurements, Quaternion *accel_estimate_out)
+{
+    float ax = accel_measurements->x;
+    float ay = accel_measurements->y;
+    float az = accel_measurements->z;
+
+    if (accel_measurements->z >= 0.0f)
+    {
+        float s = sqrtf((ax + 1) * 2);
+        float s_inv = 1.0f / s;
+        Quaternion_set(
+            s * 0.5f,
+            -ay * s_inv,
+            ax * s_inv,
+            0,
+            accel_estimate_out
+        );
+    }
+    else
+    {
+        float s = sqrtf((1 - ax) * 2);
+        float s_inv = 1.0f / s;
+        Quaternion_set(
+            -ay * s_inv,
+            0.5f * s_inv,
+            0.0,
+            ax * s_inv,
+            accel_estimate_out
+        );
+    }    
+}
+
+/**
+ * Quaternion math based on the following paper
+ * Valenti, R. G., Dryanovski, I., & Xiao, J. (2015). Keeping a Good Attitude: A Quaternion-Based Orientation Filter for IMUs and MARGs. Sensors, 15(8), 19302-19330. https://doi.org/10.3390/s150819302
+ */
 void complementary_filter(
-    euler_angles_t *next_orientation, 
-    euler_angles_t *previous_orientation, 
+    Quaternion *next_orientation, 
+    Quaternion *previous_orientation, 
     ism330dlc_gyro_t *gyro_measurements, 
     ism330dlc_accel_t *accel_measurements, 
     float delta_time_s
 )    
 {
-    float gyro_roll = previous_orientation->roll + gyro_measurements->y * delta_time_s;
-    float gyro_pitch = previous_orientation->pitch + gyro_measurements->x * delta_time_s;
-    float gyro_yaw = previous_orientation->yaw + gyro_measurements->z * delta_time_s;
+    // Use small angle approximation for converting the gyro measurements to quaternion form 
+    Quaternion delta_orientation;
+    Quaternion gyro_estimate;
+    Quaternion normalized_gyro_estimate;
+    Quaternion_set(
+        1.0f,
+        gyro_measurements->x * delta_time_s * 0.5,
+        gyro_measurements->y * delta_time_s * 0.5,
+        gyro_measurements->z * delta_time_s * 0.5,
+        &delta_orientation
+    );
 
-    float accel_roll = (float)atan(accel_measurements->z/accel_measurements->y);
-    float accel_pitch = (float)atan(accel_measurements->z/accel_measurements->x);
+    Quaternion_multiply(previous_orientation, &delta_orientation, &gyro_estimate);
+    Quaternion_normalize(&gyro_estimate, &normalized_gyro_estimate);
 
-    next_orientation->roll = COMPLEMENTARY_FILTER_ACCEL_WEIGHT * accel_roll + COMPLEMENTARY_FILTER_GYRO_WEIGHT * gyro_roll;
-    next_orientation->pitch = COMPLEMENTARY_FILTER_ACCEL_WEIGHT * accel_pitch + COMPLEMENTARY_FILTER_GYRO_WEIGHT * gyro_pitch;
-    next_orientation->yaw = gyro_yaw;
+    // Determine orientation defined by acceleration:
+    // Find the smallest arc from the global gravity frame [0,0,1]
+    // Math based on fig. 25 (Valenti et al. 2015) 
+    Quaternion accel_estimate;
+    calculate_accel_quaternion_estimate(accel_measurements, &accel_estimate);
+
+    Quaternion fused_estimate;
+    Quaternion_slerp(
+        &normalized_gyro_estimate,
+        &accel_estimate,
+        COMPLEMENTARY_FILTER_ACCEL_WEIGHT,
+        &fused_estimate
+    );
+    
+    Quaternion_normalize(&fused_estimate, &next_orientation);
 };
 
 void main() 
@@ -92,11 +144,26 @@ void main()
     ism330dlc_read_gyro_full_scale(&ism330dlc_sensor, &gyro_fs);
     
     printf("WHO_AM_I: 0x%02X \n", who_am_i);
-    printf("Last Accel fs 0x%02X \n", accel_fs);
-    printf("Last Gyro fs 0x%02X \n", gyro_fs);
 
-    euler_angles_t current_orientation = {0};
+    Quaternion orientation_a;
+    Quaternion orientation_b;
 
+    Quaternion *current_orientation_ptr = &orientation_a;
+    Quaternion *next_orientation_ptr = &orientation_b;
+    Quaternion *temp_orientation_ptr = &orientation_a;
+
+    double euler_angles[3];
+
+    // Determine the initial state using accel data
+    ism330dlc_read_raw_accel_data(&ism330dlc_sensor, &raw_accel_data);
+    ism330dlc_convert_raw_accel_xyz_to_mps2(
+        ism330dlc_sensor.last_accel_fs,
+        &raw_accel_data,
+        &accel_data
+    );
+    calculate_accel_quaternion_estimate(&accel_data, current_orientation_ptr);
+
+    // Update the orientation over time and output the estimated state
     uint64_t last_poll_time = time_us_64();
     while (true) {
         uint64_t delta_time = time_us_64() - last_poll_time;
@@ -121,23 +188,28 @@ void main()
         last_poll_time = time_us_64();
         
         complementary_filter(
-            &current_orientation,
-            &current_orientation,
+            next_orientation_ptr,
+            current_orientation_ptr,
             &gyro_data,
             &accel_data,
             (float)delta_time * US_TO_S_CONVERSION
         );
+
+        Quaternion_toEulerZYX(next_orientation_ptr, euler_angles);
         
         printf("----------------------------------------------\n");
         printf("Temperature        :   %.3f               Celcius \n", temp);
         printf("Accelerometer Data : [ %.3f, %.3f, %.3f ] m/s \n", accel_data.x, accel_data.y, accel_data.z);
         printf("Gyroscope Data     : [ %.3f, %.3f, %.3f ] rad/s \n", gyro_data.x, gyro_data.y, gyro_data.z);
         printf("Fused Orientation  : [ %.3f, %.3f, %.3f ] degrees \n", 
-            RAD_TO_DEG_CONVERSION * current_orientation.roll, 
-            RAD_TO_DEG_CONVERSION * current_orientation.pitch, 
-            RAD_TO_DEG_CONVERSION * current_orientation.yaw
+            RAD_TO_DEG_CONVERSION * euler_angles[0], 
+            RAD_TO_DEG_CONVERSION * euler_angles[1], 
+            RAD_TO_DEG_CONVERSION * euler_angles[2]
         );
 
+        temp_orientation_ptr = next_orientation_ptr;
+        next_orientation_ptr = current_orientation_ptr;
+        current_orientation_ptr = temp_orientation_ptr;
         sleep_us(150);
     };
 };
