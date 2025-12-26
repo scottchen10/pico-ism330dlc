@@ -9,86 +9,142 @@
 #define US_TO_S_CONVERSION (1.0f/1000000.0f)
 #define RAD_TO_DEG_CONVERSION 57.2958f
 
+void predict_next_orientation_from_gyro(Quaternion *previous_orientation, ism330dlc_gyro_t *gyro_measurements, float delta_time_sec, Quaternion *out_predicted_orientation)
+{
+    // Use small angle approximation for converting the gyro measurements to quaternion form 
+    Quaternion omega_q;
+    Quaternion q_dot;
+    Quaternion integrated_q;
+    Quaternion_set(
+        0.0f,
+        -gyro_measurements->x * delta_time_sec * 0.5,
+        -gyro_measurements->y * delta_time_sec * 0.5,
+        -gyro_measurements->z * delta_time_sec * 0.5,
+        &omega_q
+    );
 
-/**
- * Quaternion math based on the following paper
- * Valenti, R. G., Dryanovski, I., & Xiao, J. (2015). Keeping a Good Attitude: A Quaternion-Based Orientation Filter for IMUs and MARGs. Sensors, 15(8), 19302-19330. https://doi.org/10.3390/s150819302
- * See Section 5.21 for more details
- */
-void calculate_accel_quaternion_estimate(ism330dlc_accel_t *accel_measurements, Quaternion *accel_estimate_out)
+
+    // Equivalent to equation 38
+    Quaternion_multiply(&omega_q, previous_orientation, &q_dot);
+
+    // Equivalent to equation 42
+    Quaternion_add(&q_dot, previous_orientation, &integrated_q);
+    Quaternion_normalize(&integrated_q, out_predicted_orientation);    
+}
+
+void calculate_accel_quaternion_estimate(ism330dlc_accel_t *accel_measurements, Quaternion *out_accel_estimate)
 {
     float ax = accel_measurements->x;
     float ay = accel_measurements->y;
     float az = accel_measurements->z;
+    float mag = sqrtf(ax * ax + ay * ay + az * az);
+    if (mag > 0.000001f) {
+        ax /= mag; ay /= mag; az /= mag;
+    } else {
+        Quaternion_setIdentity(out_accel_estimate);
+        return;
+    }
 
-    if (accel_measurements->z >= 0.0f)
+    Quaternion accel_estimate;
+
+    if (az >= 0.0f)
     {
-        float s = sqrtf((ax + 1) * 2);
+        float s = sqrtf(2.0f * (az + 1.0f));
         float s_inv = 1.0f / s;
         Quaternion_set(
-            s * 0.5f,
+            0.5f * s,
             -ay * s_inv,
             ax * s_inv,
-            0,
-            accel_estimate_out
+            0.0f,
+            &accel_estimate
         );
     }
     else
     {
-        float s = sqrtf((1 - ax) * 2);
+        float s = sqrtf(2.0f * (1.0f - az));
         float s_inv = 1.0f / s;
         Quaternion_set(
             -ay * s_inv,
-            0.5f * s_inv,
-            0.0,
+            0.5f * s,
+            0.0f,
             ax * s_inv,
-            accel_estimate_out
+            &accel_estimate
         );
     }    
+
+    Quaternion_normalize(&accel_estimate, out_accel_estimate);
 }
 
-/**
- * Quaternion math based on the following paper
- * Valenti, R. G., Dryanovski, I., & Xiao, J. (2015). Keeping a Good Attitude: A Quaternion-Based Orientation Filter for IMUs and MARGs. Sensors, 15(8), 19302-19330. https://doi.org/10.3390/s150819302
- */
+inline void transform_local_vector_to_global(Quaternion *global_to_local_q, Quaternion *vector, Quaternion *out_global_vector)
+{
+    Quaternion inverse_global_to_local_q;
+    Quaternion_conjugate(global_to_local_q, &inverse_global_to_local_q);
+
+    Quaternion temp;
+    Quaternion_multiply(&inverse_global_to_local_q, vector, &temp);
+    Quaternion_multiply(&temp, global_to_local_q, out_global_vector);   
+}
+
+
+inline void calculate_delta_q_acc(Quaternion *predicted_gravity, Quaternion *out_delta_q_acc)
+{
+    float gx = predicted_gravity->v[0];
+    float gy = predicted_gravity->v[1];
+    float gz = predicted_gravity->v[2];
+    float soln_common_factor = sqrtf(2.0f * (gz + 1.0f));
+
+    Quaternion_set(
+        soln_common_factor * 0.5,
+        -gy / soln_common_factor,
+        gx / soln_common_factor,
+        0,
+        out_delta_q_acc
+    );
+}
+
+void calculate_accel_correction(Quaternion *gyro_prediction, ism330dlc_accel_t *accel_measurements, Quaternion *out_accel_correction)
+{
+    // Normalizes acceleration
+    float ax = accel_measurements->x;
+    float ay = accel_measurements->y;
+    float az = accel_measurements->z;
+    float mag = sqrtf(ax * ax + ay * ay + az * az);
+    if (mag > 0.0f) {
+        ax /= mag; ay /= mag; az /= mag;
+    }
+
+    Quaternion local_accel_vec;
+    Quaternion_set(0, ax, ay, az, &local_accel_vec);
+
+    Quaternion predicted_gravity;
+    transform_local_vector_to_global(gyro_prediction, &local_accel_vec, &predicted_gravity);
+    
+    Quaternion delta_q_acc;
+    calculate_delta_q_acc(&predicted_gravity, &delta_q_acc);
+
+    Quaternion identity_q;
+    Quaternion_setIdentity(&identity_q);
+    Quaternion_slerp(&identity_q, &delta_q_acc, COMPLEMENTARY_FILTER_ACCEL_WEIGHT, out_accel_correction);   
+}
+
 void complementary_filter(
     Quaternion *next_orientation, 
     Quaternion *previous_orientation, 
     ism330dlc_gyro_t *gyro_measurements, 
     ism330dlc_accel_t *accel_measurements, 
-    float delta_time_s
+    float delta_time_sec
 )    
 {
-    // Use small angle approximation for converting the gyro measurements to quaternion form 
-    Quaternion delta_orientation;
-    Quaternion gyro_estimate;
-    Quaternion normalized_gyro_estimate;
-    Quaternion_set(
-        1.0f,
-        gyro_measurements->x * delta_time_s * 0.5,
-        gyro_measurements->y * delta_time_s * 0.5,
-        gyro_measurements->z * delta_time_s * 0.5,
-        &delta_orientation
-    );
-
-    Quaternion_multiply(previous_orientation, &delta_orientation, &gyro_estimate);
-    Quaternion_normalize(&gyro_estimate, &normalized_gyro_estimate);
-
-    // Determine orientation defined by acceleration:
-    // Find the smallest arc from the global gravity frame [0,0,1]
-    // Math based on fig. 25 (Valenti et al. 2015) 
-    Quaternion accel_estimate;
-    calculate_accel_quaternion_estimate(accel_measurements, &accel_estimate);
+    Quaternion gyro_prediction;
+    predict_next_orientation_from_gyro(previous_orientation, gyro_measurements, delta_time_sec, &gyro_prediction);
+    
+    Quaternion accel_correction;
+    calculate_accel_correction(&gyro_prediction, accel_measurements, &accel_correction);
 
     Quaternion fused_estimate;
-    Quaternion_slerp(
-        &normalized_gyro_estimate,
-        &accel_estimate,
-        COMPLEMENTARY_FILTER_ACCEL_WEIGHT,
-        &fused_estimate
-    );
-    
-    Quaternion_normalize(&fused_estimate, &next_orientation);
+    Quaternion_multiply(&gyro_prediction, &accel_correction, &fused_estimate);
+
+    Quaternion_normalize(&fused_estimate, next_orientation);
 };
 
 void main() 
