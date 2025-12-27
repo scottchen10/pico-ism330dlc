@@ -1,0 +1,3 @@
+[submodule "examples/complementary_filter_demo/external/Quaternion"]
+	path = examples/complementary_filter_demo/external/Quaternion
+	url = https://github.com/MartinWeigel/Quaternion.git

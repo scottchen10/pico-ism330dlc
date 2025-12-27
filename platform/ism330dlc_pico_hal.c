@@ -1,5 +1,6 @@
 #include "ism330dlc_pico_hal.h"
 #include "hardware/gpio.h"
+#include <assert.h>
 
 ism330dlc_status_t ism330dlc_pico_i2c_bus_init(const ism330dlc_pico_i2c_config config)
 {
@@ -8,10 +9,6 @@ ism330dlc_status_t ism330dlc_pico_i2c_bus_init(const ism330dlc_pico_i2c_config c
     gpio_set_function(config.scl_pin, GPIO_FUNC_I2C);
     gpio_pull_up(config.scl_pin);
     gpio_pull_up(config.sda_pin);
-
-    gpio_init(config.cs_pin);
-    gpio_set_dir(config.cs_pin, GPIO_OUT);
-    gpio_put(config.cs_pin, 1);
 
     return ISM330DLC_SUCCESS;
 }
@@ -40,12 +37,11 @@ ism330dlc_status_t ism330dlc_pico_i2c_pins_deinit(const ism330dlc_pico_i2c_confi
     return ISM330DLC_SUCCESS;
 }
 
-ism330dlc_status_t ism330dlc_i2c_read_register(void *handle, uint8_t address, uint8_t *buffer, size_t length)
+ism330dlc_status_t ism330dlc_i2c_read_registers(void *handle, uint8_t register_addr, uint8_t *buffer, size_t length)
 {
     ism330dlc_pico_i2c_config *config = (ism330dlc_pico_i2c_config *)handle;
-
     int resp;
-    resp = i2c_write_blocking(config->port, config->i2c_address, &address, sizeof(address), true);
+    resp = i2c_write_blocking(config->port, config->i2c_address, &register_addr, sizeof(register_addr), true);
 
     if (resp == PICO_ERROR_GENERIC)
         return ISM330DLC_ERROR;
@@ -58,17 +54,19 @@ ism330dlc_status_t ism330dlc_i2c_read_register(void *handle, uint8_t address, ui
     return ISM330DLC_SUCCESS;
 };
 
-ism330dlc_status_t ism330dlc_i2c_write_register(void *handle, uint8_t address, uint8_t *data, size_t length)
+ism330dlc_status_t ism330dlc_i2c_write_registers(void *handle, uint8_t register_addr, uint8_t *data, size_t length)
 {
     ism330dlc_pico_i2c_config *config = (ism330dlc_pico_i2c_config *)handle;
+    uint8_t buffer_len = length + 1;
+    uint8_t buffer[buffer_len];
+    buffer[0] = register_addr;
+    for (uint8_t index = 0; index < length; index++)
+    {
+        buffer[index + 1] = data[index];
+    }
 
     int resp;
-    resp = i2c_write_blocking(config->port, config->i2c_address, &address, sizeof(address), true);
-
-    if (resp == PICO_ERROR_GENERIC)
-        return ISM330DLC_ERROR;
-
-    resp = i2c_write_blocking(config->port, config->i2c_address, data, length, false);
+    resp = i2c_write_blocking(config->port, config->i2c_address, buffer, buffer_len, true);
 
     if (resp == PICO_ERROR_GENERIC)
         return ISM330DLC_ERROR;
@@ -83,10 +81,6 @@ ism330dlc_status_t ism330dlc_pico_spi4_bus_init(ism330dlc_pico_spi4_config confi
     gpio_set_function(config.sdo_pin, GPIO_FUNC_SPI);
     gpio_set_function(config.sdi_pin, GPIO_FUNC_SPI);
 
-    gpio_init(config.cs_pin);
-    gpio_set_dir(config.cs_pin, GPIO_OUT);
-    gpio_put(config.cs_pin, 1);
-
     return ISM330DLC_SUCCESS;
 }
 
@@ -94,7 +88,7 @@ ism330dlc_status_t ism330dlc_pico_spi4_pins_init(ism330dlc_pico_spi4_config conf
 {
     gpio_init(config.cs_pin);
     gpio_set_dir(config.cs_pin, GPIO_OUT);
-    gpio_put(config.cs_pin, 1);
+    gpio_put(config.cs_pin, 0);
 
     return ISM330DLC_SUCCESS;
 }
@@ -116,7 +110,7 @@ ism330dlc_status_t ism330dlc_pico_spi4_pins_deinit(ism330dlc_pico_spi4_config co
     return ISM330DLC_SUCCESS;
 }
 
-ism330dlc_status_t ism330dlc_spi4_read_register(void *handle, uint8_t address, uint8_t *buffer, size_t length)
+ism330dlc_status_t ism330dlc_spi4_read_registers(void *handle, uint8_t address, uint8_t *buffer, size_t length)
 {
     ism330dlc_pico_spi4_config *config = (ism330dlc_pico_spi4_config *)handle;
     // The MSB is set as 1 indicating a read command
@@ -142,7 +136,7 @@ ism330dlc_status_t ism330dlc_spi4_read_register(void *handle, uint8_t address, u
     return ISM330DLC_SUCCESS;
 };
 
-ism330dlc_status_t ism330dlc_spi4_write_register(void *handle, uint8_t address, uint8_t *data, size_t length)
+ism330dlc_status_t ism330dlc_spi4_write_registers(void *handle, uint8_t address, uint8_t *data, size_t length)
 {
     ism330dlc_pico_spi4_config *config = (ism330dlc_pico_spi4_config *)handle;
     // The MSB is set as 0 indicating a write command
@@ -166,4 +160,16 @@ ism330dlc_status_t ism330dlc_spi4_write_register(void *handle, uint8_t address, 
     gpio_put(config->cs_pin, 1);
 
     return ISM330DLC_SUCCESS;
+};
+
+ism330dlc_status_t ism330dlc_spi3_read_registers(void *handle, uint8_t address, uint8_t *buffer, size_t length)
+{
+    assert(false && "ERROR SPI3 IS UNAVAILABLE FOR PICO");
+    return ISM330DLC_ERROR;
+};
+
+ism330dlc_status_t ism330dlc_spi3_write_registers(void *handle, uint8_t address, uint8_t *data, size_t length)
+{
+    assert(false && "ERROR SPI3 IS UNAVAILABLE FOR PICO");
+    return ISM330DLC_ERROR;
 };
