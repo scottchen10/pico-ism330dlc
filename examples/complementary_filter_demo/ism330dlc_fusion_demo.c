@@ -1,4 +1,4 @@
-#include "ism330dlc_pico_hal.h"
+#include "ism330dlc_pico_pal.h"
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include <math.h>
@@ -187,14 +187,14 @@ void main()
     ism330dlc_read_who_am_i(&ism330dlc_sensor, &who_am_i);
     
     // The following are optional device configuration commands as they are automatically set to certain default values per the datasheet
-    ism330dlc_update_accel_performance_mode(&ism330dlc_sensor, ISM330DLC_ACCEL_GYRO_HIGH_PERFORMANCE);
-    ism330dlc_update_gyro_performance_mode(&ism330dlc_sensor, ISM330DLC_ACCEL_GYRO_HIGH_PERFORMANCE);
+    ism330dlc_set_accel_performance_mode(&ism330dlc_sensor, ISM330DLC_ACCEL_GYRO_HIGH_PERFORMANCE);
+    ism330dlc_set_gyro_performance_mode(&ism330dlc_sensor, ISM330DLC_ACCEL_GYRO_HIGH_PERFORMANCE);
     
-    ism330dlc_update_gyro_odr(&ism330dlc_sensor, ISM330DLC_ACCEL_GYRO_ODR_6660_HZ);
-    ism330dlc_update_accel_odr(&ism330dlc_sensor, ISM330DLC_ACCEL_GYRO_ODR_6660_HZ);
+    ism330dlc_set_gyro_odr(&ism330dlc_sensor, ISM330DLC_ACCEL_GYRO_ODR_6660_HZ);
+    ism330dlc_set_accel_odr(&ism330dlc_sensor, ISM330DLC_ACCEL_GYRO_ODR_6660_HZ);
     
-    ism330dlc_update_accel_full_scale(&ism330dlc_sensor, ISM330DLC_ACCEL_FS_2G);
-    ism330dlc_update_gyro_full_scale(&ism330dlc_sensor, ISM330DLC_GYRO_FS_125DPS);
+    ism330dlc_set_accel_full_scale(&ism330dlc_sensor, ISM330DLC_ACCEL_FS_2G);
+    ism330dlc_set_gyro_full_scale(&ism330dlc_sensor, ISM330DLC_GYRO_FS_125DPS);
     
     ism330dlc_read_accel_full_scale(&ism330dlc_sensor, &accel_fs);
     ism330dlc_read_gyro_full_scale(&ism330dlc_sensor, &gyro_fs);

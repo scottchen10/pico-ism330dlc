@@ -128,7 +128,7 @@ ism330dlc_status_t ism330dlc_read_raw_temperature_data(ism330dlc_t *device, ism3
     );
 };
 
-ism330dlc_status_t ism330dlc_update_accel_performance_mode(ism330dlc_t *device, ism330dlc_accel_gyro_performance_mode_t mode)
+ism330dlc_status_t ism330dlc_set_accel_performance_mode(ism330dlc_t *device, ism330dlc_accel_gyro_performance_mode_t mode)
 {
     return ism330dlc_write_register_with_mask(
         device,
@@ -137,7 +137,7 @@ ism330dlc_status_t ism330dlc_update_accel_performance_mode(ism330dlc_t *device, 
         (mode == ISM330DLC_ACCEL_GYRO_HIGH_PERFORMANCE) ? 0x00 : ISM330DLC_MASK_XL_HM_MODE
     );
 };
-ism330dlc_status_t ism330dlc_update_accel_odr(ism330dlc_t *device, ism330dlc_accel_gyro_odr_t odr)
+ism330dlc_status_t ism330dlc_set_accel_odr(ism330dlc_t *device, ism330dlc_accel_gyro_odr_t odr)
 {
     return ism330dlc_write_register_with_mask(
         device,
@@ -147,7 +147,7 @@ ism330dlc_status_t ism330dlc_update_accel_odr(ism330dlc_t *device, ism330dlc_acc
     );
 };
 
-ism330dlc_status_t ism330dlc_update_gyro_performance_mode(ism330dlc_t *device, ism330dlc_accel_gyro_performance_mode_t mode)
+ism330dlc_status_t ism330dlc_set_gyro_performance_mode(ism330dlc_t *device, ism330dlc_accel_gyro_performance_mode_t mode)
 {
     return ism330dlc_write_register_with_mask(
         device,
@@ -157,7 +157,7 @@ ism330dlc_status_t ism330dlc_update_gyro_performance_mode(ism330dlc_t *device, i
     );
 };
 
-ism330dlc_status_t ism330dlc_update_gyro_odr(ism330dlc_t *device, ism330dlc_accel_gyro_odr_t odr)
+ism330dlc_status_t ism330dlc_set_gyro_odr(ism330dlc_t *device, ism330dlc_accel_gyro_odr_t odr)
 {
     return ism330dlc_write_register_with_mask(
         device,
@@ -167,7 +167,7 @@ ism330dlc_status_t ism330dlc_update_gyro_odr(ism330dlc_t *device, ism330dlc_acce
     );
 };
 
-ism330dlc_status_t ism330dlc_update_accel_full_scale(ism330dlc_t *device, ism330dlc_accel_full_scale_t scale)
+ism330dlc_status_t ism330dlc_set_accel_full_scale(ism330dlc_t *device, ism330dlc_accel_full_scale_t scale)
 {
     return ism330dlc_write_register_with_mask(
         device,
@@ -196,7 +196,7 @@ ism330dlc_status_t ism330dlc_read_accel_full_scale(ism330dlc_t *device, ism330dl
     return resp;
 };
 
-ism330dlc_status_t ism330dlc_update_gyro_full_scale(ism330dlc_t *device, ism330dlc_gyro_full_scale_t scale)
+ism330dlc_status_t ism330dlc_set_gyro_full_scale(ism330dlc_t *device, ism330dlc_gyro_full_scale_t scale)
 {
     return ism330dlc_write_register_with_mask(
         device,

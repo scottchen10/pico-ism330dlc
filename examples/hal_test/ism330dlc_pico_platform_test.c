@@ -1,4 +1,4 @@
-#include "ism330dlc_pico_hal.h"
+#include "ism330dlc_pico_pal.h"
 #include "ism330dlc_driver/ism330dlc_regs.h"
 #include "pico/stdlib.h"
 #include "stdio.h"
@@ -76,7 +76,7 @@ int main(void)
     // Verify writing to registers work
 
     ism330dlc_accel_full_scale_t stored_scale = 0x99;
-    resp = ism330dlc_update_accel_full_scale(&ism330dlc_sensor, ISM330DLC_ACCEL_FS_16G);
+    resp = ism330dlc_set_accel_full_scale(&ism330dlc_sensor, ISM330DLC_ACCEL_FS_16G);
     if (resp != ISM330DLC_SUCCESS)
         printf("Failed to update accelerometer full scale \n");
 

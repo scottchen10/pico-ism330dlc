@@ -1,5 +1,5 @@
 add_library(ism330dlc_platform_pico STATIC
-    ism330dlc_pico_hal.c
+    ism330dlc_pico_pal.c
 )
 
 target_link_libraries(ism330dlc_platform_pico

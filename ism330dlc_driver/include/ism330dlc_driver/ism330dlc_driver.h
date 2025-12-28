@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include "ism330dlc_driver/ism330dlc_regs.h"
 
 typedef enum
 {
@@ -151,7 +153,7 @@ typedef enum
  *
  * @return ISM330DLC status code.
  */
-ism330dlc_status_t ism330dlc_update_accel_performance_mode(ism330dlc_t *device, ism330dlc_accel_gyro_performance_mode_t mode);
+ism330dlc_status_t ism330dlc_set_accel_performance_mode(ism330dlc_t *device, ism330dlc_accel_gyro_performance_mode_t mode);
 
 /**
  * @brief Updates the accelerometer output data rate.
@@ -161,7 +163,7 @@ ism330dlc_status_t ism330dlc_update_accel_performance_mode(ism330dlc_t *device, 
  *
  * @return ISM330DLC status code.
  */
-ism330dlc_status_t ism330dlc_update_accel_odr(ism330dlc_t *device, ism330dlc_accel_gyro_odr_t odr);
+ism330dlc_status_t ism330dlc_set_accel_odr(ism330dlc_t *device, ism330dlc_accel_gyro_odr_t odr);
 
 /**
  * @brief Updates the gyroscope performance mode.
@@ -173,7 +175,7 @@ ism330dlc_status_t ism330dlc_update_accel_odr(ism330dlc_t *device, ism330dlc_acc
  *
  * @return ISM330DLC status code.
  */
-ism330dlc_status_t ism330dlc_update_gyro_performance_mode(ism330dlc_t *device, ism330dlc_accel_gyro_performance_mode_t mode);
+ism330dlc_status_t ism330dlc_set_gyro_performance_mode(ism330dlc_t *device, ism330dlc_accel_gyro_performance_mode_t mode);
 
 /**
  * @brief Updates the gyroscope output data rate.
@@ -183,7 +185,7 @@ ism330dlc_status_t ism330dlc_update_gyro_performance_mode(ism330dlc_t *device, i
  *
  * @return ISM330DLC status code.
  */
-ism330dlc_status_t ism330dlc_update_gyro_odr(ism330dlc_t *device, ism330dlc_accel_gyro_odr_t odr);
+ism330dlc_status_t ism330dlc_set_gyro_odr(ism330dlc_t *device, ism330dlc_accel_gyro_odr_t odr);
 
 /**
  * @brief Updates the accelerometer measurement scale.
@@ -193,7 +195,7 @@ ism330dlc_status_t ism330dlc_update_gyro_odr(ism330dlc_t *device, ism330dlc_acce
  *
  * @return ISM330DLC status code.
  */
-ism330dlc_status_t ism330dlc_update_accel_full_scale(ism330dlc_t *device, ism330dlc_accel_full_scale_t scale);
+ism330dlc_status_t ism330dlc_set_accel_full_scale(ism330dlc_t *device, ism330dlc_accel_full_scale_t scale);
 
 /**
  * @brief Reads the accelerometer measurement scale and caches the result
@@ -213,7 +215,7 @@ ism330dlc_status_t ism330dlc_read_accel_full_scale(ism330dlc_t *device, ism330dl
  *
  * @return ISM330DLC status code.
  */
-ism330dlc_status_t ism330dlc_update_gyro_full_scale(ism330dlc_t *device, ism330dlc_gyro_full_scale_t scale);
+ism330dlc_status_t ism330dlc_set_gyro_full_scale(ism330dlc_t *device, ism330dlc_gyro_full_scale_t scale);
 
 /**
  * @brief Reads the gyroscope measurement scale and caches the result
@@ -280,5 +282,102 @@ void ism330dlc_convert_raw_gyro_xyz_to_rps(ism330dlc_gyro_full_scale_t scale, co
  */
 float ism330dlc_convert_raw_temp_to_celcius(int16_t temp);
 
-#endif
 
+typedef enum 
+{
+    ISM330DLC_INTERRUPT_ACTIVE_HIGH = 0x00,
+    ISM330DLC_INTERRUPT_ACTIVE_LOW  = 0x20,
+} ism330dlc_interrupt_active_mode_t;
+
+ism330dlc_status_t ism330dlc_set_interrupt_active_mode(ism330dlc_t *device, ism330dlc_interrupt_active_mode_t mode);
+
+typedef enum 
+{
+    ISM330DLC_INTERRUPT_PUSH_PULL  = 0x00,
+    ISM330DLC_INTERRUPT_OPEN_DRAIN = 0x10,
+} ism330dlc_interrupt_output_mode_t;
+
+ism330dlc_status_t ism330dlc_set_interrupt_output_mode(ism330dlc_t *device, ism330dlc_interrupt_output_mode_t mode);
+
+ism330dlc_status_t ism330dlc_set_event_interrupts_enable(bool are_event_driven_interrupts_enabled);
+
+typedef enum 
+{
+    ISM330DLC_ACTIVITY_EVENT_DISABLED        = 0x00,
+    ISM330DLC_ACTIVITY_EVENT_GYRO_UNCHANGED  = 0x20,
+    ISM330DLC_ACTIVITY_EVENT_GYRO_SLEEP      = 0x40,
+    ISM330DLC_ACTIVITY_EVENT_GYRO_POWER_DOWN = 0x60,
+
+} ism330dlc_inactivity_event_mode_t;
+
+ism330dlc_status_t ism330dlc_set_inactivity_event_mode(ism330dlc_inactivity_event_mode_t mode);
+
+typedef enum
+{
+    ISM330DLC_EVENT_TAP_X_EN = 0x08,
+    ISM330DLC_EVENT_TAP_Y_EN = 0x04,
+    ISM330DLC_EVENT_TAP_Z_EN = 0x02,
+} ism330dlc_tap_event_axis_t;
+
+ism330dlc_status_t ism330dlc_set_tap_event_axis_enable(ism330dlc_tap_event_axis_t axis, bool enabled);
+
+typedef enum
+{
+    ISM330DLC_INTERRUPT_UNLATCHED = 0x00,
+    ISM330DLC_INTERRUPT_LATCHED
+} ism330dlc_interrupt_latched_mode_t;
+
+ism330dlc_status_t ism330dlc_set_interrupt_latched_mode(ism330dlc_interrupt_latched_mode_t mode);
+
+typedef enum
+{
+    ISM330DLC_MD_EVENT_INACT_STATE = ISM330DLC_MASK_MD_INACT_STATE,
+    ISM330DLC_MD_EVENT_SINGLE_TAP  = ISM330DLC_MASK_MD_SINGLE_TAP,
+    ISM330DLC_MD_EVENT_WU          = ISM330DLC_MASK_MD_WU,
+    ISM330DLC_MD_EVENT_FF          = ISM330DLC_MASK_MD_FF,
+    ISM330DLC_MD_EVENT_DOUBLE_TAP  = ISM330DLC_MASK_MD_DOUBLE_TAP,
+    ISM330DLC_MD_EVENT_6D          = ISM330DLC_MASK_MD_6D,
+    ISM330DLC_MD_EVENT_TILT        = ISM330DLC_MASK_MD_TILT,
+} ism330dlc_md_event_t;
+
+typedef enum
+{
+    ISM330DLC_INTERRUPT_PIN_1 = 0,
+    ISM330DLC_INTERRUPT_PIN_2,
+} ism330dlc_interrupt_pin_t;
+
+ism330dlc_status_t ism330dlc_set_event_interrupt_route(ism330dlc_interrupt_pin_t pin, ism330dlc_md_event_t event, bool enabled);
+
+typedef enum
+{
+    ISM330DLC_6D_THS_80_DEG = 0x00,
+    ISM330DLC_6D_THS_70_DEG = 0x20,
+    ISM330DLC_6D_THS_60_DEG = 0x40,
+    ISM330DLC_6D_THS_50_DEG = 0x60,
+} ism330dlc_6d_threshold_t;
+
+typedef enum
+{
+    ISM330DLC_INACT_DISABLED      = 0x00,
+    ISM330DLC_INACT_XL_12HZ       = 0x20,
+    ISM330DLC_INACT_XL_12HZ_G_SLP = 0x40,
+    ISM330DLC_INACT_XL_12HZ_G_PD  = 0x60,
+} ism330dlc_inact_mode_t;
+
+ism330dlc_status_t ism330dlc_set_wakeup_threshold(uint8_t threshold);
+ism330dlc_status_t ism330dlc_set_wakeup_duration(uint8_t duration);
+
+ism330dlc_status_t ism330dlc_set_freefall_threshold(uint8_t threshold);
+ism330dlc_status_t ism330dlc_set_freefall_duration(uint8_t duration);
+
+ism330dlc_status_t ism330dlc_set_tap_threshold(uint8_t threshold);
+ism330dlc_status_t ism330dlc_set_tap_timing(uint8_t shock, uint8_t quiet, uint8_t duration);
+ism330dlc_status_t ism330dlc_set_double_tap_enable(bool enabled);
+
+ism330dlc_status_t ism330dlc_set_6d_threshold(ism330dlc_6d_threshold_t threshold);
+ism330dlc_status_t ism330dlc_set_4d_orientation_enable(bool enabled);
+
+ism330dlc_status_t ism330dlc_set_inactivity_mode(ism330dlc_inact_mode_t mode);
+ism330dlc_status_t ism330dlc_set_sleep_duration(uint8_t duration);
+
+#endif
