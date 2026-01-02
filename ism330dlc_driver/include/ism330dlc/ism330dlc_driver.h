@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "ism330dlc_driver/ism330dlc_regs.h"
+#include "ism330dlc/ism330dlc_regs.h"
 
 typedef enum
 {

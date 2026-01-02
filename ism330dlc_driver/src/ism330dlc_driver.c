@@ -1,5 +1,5 @@
-#include "ism330dlc_driver/ism330dlc_driver.h"
-#include "ism330dlc_driver/ism330dlc_regs.h"
+#include "ism330dlc/ism330dlc_driver.h"
+#include "ism330dlc/ism330dlc_regs.h"
 
 #include "math.h"
 

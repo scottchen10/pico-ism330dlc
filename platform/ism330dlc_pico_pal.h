@@ -3,7 +3,7 @@
 
 #define ISM330DLC_SPI3_DISABLED
 
-#include "ism330dlc_driver/ism330dlc_driver.h"
+#include "ism330dlc/ism330dlc_driver.h"
 #include "hardware/spi.h"
 #include "hardware/i2c.h"
 

@@ -6,17 +6,12 @@ option(ISM330DLC_BUILD_PAL_TEST "Build PAL test example"                        
 
 # If standalone, set up the Raspberry Pi Pico SDK
 if (BUILD_STANDALONE)
-    #set(PICO_BOARD pico)
-    #set(PICO_BOARD pico_w)
     set(PICO_BOARD pico2)
-
-    # If pico2 is selected you have to select PICO_PLATFORM
     set(PICO_PLATFORM rp2350-arm-s)
-    # set(PICO_PLATFORM rp2350-riscv)
     set(CMAKE_C_COMPILER arm-none-eabi-gcc)
+
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
     set(CMAKE_COLOR_DIAGNOSTICS ON)
-    
     include($ENV{PICO_SDK_PATH}/pico_sdk_init.cmake)
 
     set(CMAKE_C_STANDARD 11)

@@ -1,5 +1,5 @@
 #include "ism330dlc_pico_pal.h"
-#include "ism330dlc_driver/ism330dlc_regs.h"
+#include "ism330dlc/ism330dlc_regs.h"
 #include "pico/stdlib.h"
 #include "stdio.h"
 
