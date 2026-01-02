@@ -21,7 +21,7 @@ static ism330dlc_status_t ism330dlc_write_register_with_mask(
     if (resp != ISM330DLC_SUCCESS)
         return resp;
 
-    uint8_t new_register_state = (register_state & ~reset_mask) | masked_value;
+    uint8_t new_register_state = (register_state & ~reset_mask) | (masked_value & ~reset_mask);
 
     return device->write_registers(
         device->device_context,
@@ -320,4 +320,312 @@ void ism330dlc_convert_raw_gyro_xyz_to_rps(
 float ism330dlc_convert_raw_temp_to_celcius(int16_t raw_temp)
 {
     return ISM330DLC_TEMPERATURE_OFFSET + raw_temp * ISM330DLC_SENS_TEMP;
+};
+
+ism330dlc_status_t ism330dlc_set_interrupt_active_mode(ism330dlc_t *device, ism330dlc_interrupt_active_mode_t mode)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_CTRL3_C,
+        ISM330DLC_MASK_H_LACTIVE,
+        (uint8_t)mode
+    );
+};
+
+ism330dlc_status_t ism330dlc_set_interrupt_output_mode(ism330dlc_t *device, ism330dlc_interrupt_output_mode_t mode)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_CTRL3_C,
+        ISM330DLC_MASK_PP_OD,
+        (uint8_t)mode
+    );
+};
+
+
+ism330dlc_status_t ism330dlc_set_event_interrupts_enable(ism330dlc_t *device, bool are_event_driven_interrupts_enabled)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_TAP_CFG,
+        ISM330DLC_MASK_INTERRUPTS_EN,
+        are_event_driven_interrupts_enabled ? ISM330DLC_MASK_INTERRUPTS_EN : 0x00
+    );
+};
+
+ism330dlc_status_t ism330dlc_set_inactivity_event_mode(ism330dlc_t *device, ism330dlc_inactivity_event_mode_t mode)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_TAP_CFG,
+        ISM330DLC_MASK_INACT_EN,
+        (uint8_t)mode
+    );
+};
+ism330dlc_status_t ism330dlc_set_tap_event_axis_enable(ism330dlc_t *device, ism330dlc_tap_event_axis_t axis, bool enabled)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_TAP_CFG,
+        (uint8_t)axis,
+        enabled ? (uint8_t)axis : 0x00
+    );
+};
+
+ism330dlc_status_t ism330dlc_set_interrupt_latched(ism330dlc_t *device, ism330dlc_interrupt_latched_t mode)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_TAP_CFG,
+        ISM330DLC_MASK_LIR,
+        (uint8_t)mode
+    );
+};
+
+ism330dlc_status_t ism330dlc_set_event_interrupt_route(ism330dlc_t *device, ism330dlc_interrupt_pin_t pin, ism330dlc_md_event_t event, bool enabled)
+{
+    uint8_t reg_addr = (pin == ISM330DLC_INTERRUPT_PIN_1) ? ISM330DLC_ADDR_MD1_CFG : ISM330DLC_ADDR_MD2_CFG;
+    
+    return ism330dlc_write_register_with_mask(
+        device,
+        reg_addr,
+        (uint8_t)event,
+        enabled ? (uint8_t)event : 0x00
+    );    
+};
+
+static uint8_t ism330dlc_quantize(float x, float lsb_value, uint8_t max_bits_value)
+{
+    int32_t quantized_value = (int32_t)(x/lsb_value);
+
+    if (quantized_value < 0) quantized_value = 0;
+    if (quantized_value > max_bits_value) quantized_value = max_bits_value;
+    return (uint8_t)quantized_value;    
+}
+
+uint8_t ism330dlc_convert_g_to_wakeup_threshold(float accel_g, ism330dlc_accel_full_scale_t full_scale)
+{
+    float lsb_value;
+    switch (full_scale) {
+        case ISM330DLC_ACCEL_FS_2G : lsb_value = ISM330DLC_SENS_WAKEUP_THS_2G;  break;
+        case ISM330DLC_ACCEL_FS_4G : lsb_value = ISM330DLC_SENS_WAKEUP_THS_4G;  break;
+        case ISM330DLC_ACCEL_FS_8G : lsb_value = ISM330DLC_SENS_WAKEUP_THS_8G;  break;
+        default:                     lsb_value = ISM330DLC_SENS_WAKEUP_THS_16G; break;
+    }
+    
+    return ism330dlc_quantize(accel_g, lsb_value, 255);
+};
+
+ism330dlc_status_t ism330dlc_set_wakeup_threshold(ism330dlc_t *device, uint8_t threshold)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_WAKE_UP_THS,
+        ISM330DLC_MASK_WK_THS,
+        threshold
+    );
+};
+
+ism330dlc_status_t ism330dlc_set_freefall_threshold(ism330dlc_t *device, ism330dlc_freefall_threshold_t threshold)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_FREE_FALL,
+        ISM330DLC_MASK_FF_THS,
+        threshold
+    );    
+};
+
+uint8_t ism330dlc_convert_g_to_tap_threshold(float accel_g, ism330dlc_accel_full_scale_t full_scale)
+{
+    float lsb_value;
+    switch (full_scale) {
+        case ISM330DLC_ACCEL_FS_2G : lsb_value = ISM330DLC_SENS_TAP_THS_2G;  break;
+        case ISM330DLC_ACCEL_FS_4G : lsb_value = ISM330DLC_SENS_TAP_THS_4G;  break;
+        case ISM330DLC_ACCEL_FS_8G : lsb_value = ISM330DLC_SENS_TAP_THS_8G;  break;
+        default:                     lsb_value = ISM330DLC_SENS_TAP_THS_16G; break;
+    }
+
+    return ism330dlc_quantize(accel_g, lsb_value, 255);
+};
+
+ism330dlc_status_t ism330dlc_set_tap_threshold(ism330dlc_t *device, uint8_t threshold)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_TAP_THS_6D,
+        ISM330DLC_MASK_TAP_THS,
+        threshold
+    );
+};
+
+
+ism330dlc_status_t ism330dlc_set_double_tap_enable(ism330dlc_t *device, bool enabled)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_WAKE_UP_THS,
+        ISM330DLC_MASK_SINGLE_DBL_TAP,
+        enabled ? ISM330DLC_MASK_SINGLE_DBL_TAP : 0x00
+    );
+};
+
+ism330dlc_status_t ism330dlc_set_6d_threshold(ism330dlc_t *device, ism330dlc_6d_threshold_t threshold)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_TAP_THS_6D,
+        ISM330DLC_MASK_6D_THS,
+        (uint8_t)threshold
+    );
+};
+ism330dlc_status_t ism330dlc_set_4d_orientation_enable(ism330dlc_t *device, bool enabled)
+{
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_TAP_THS_6D,
+        ISM330DLC_MASK_D4D_EN,
+        enabled ? ISM330DLC_MASK_D4D_EN : 0x00
+    );    
+};
+
+static float ism330dlc_get_odr_period(ism330dlc_accel_gyro_odr_t odr)
+{
+    switch (odr)
+    {
+        case ISM330DLC_ACCEL_GYRO_ODR_1_6_HZ     : return 1/1.6f;
+        case ISM330DLC_ACCEL_GYRO_ODR_12_5_HZ    : return 1/12.5f;
+        case ISM330DLC_ACCEL_GYRO_ODR_26_HZ      : return 1/26.0f;
+        case ISM330DLC_ACCEL_GYRO_ODR_52_HZ      : return 1/52.0f;
+        case ISM330DLC_ACCEL_GYRO_ODR_104_HZ     : return 1/104.0f;
+        case ISM330DLC_ACCEL_GYRO_ODR_208_HZ     : return 1/208.0f;
+        case ISM330DLC_ACCEL_GYRO_ODR_416_HZ     : return 1/416.0f;
+        case ISM330DLC_ACCEL_GYRO_ODR_833_HZ     : return 1/833.0f;
+        case ISM330DLC_ACCEL_GYRO_ODR_1660_HZ    : return 1/1660.0f;
+        case ISM330DLC_ACCEL_GYRO_ODR_3330_HZ    : return 1/3330.0f;
+        case ISM330DLC_ACCEL_GYRO_ODR_6660_HZ    : return 1/6660.0f;
+        default                                  : return 0.0f;
+    }
+}
+
+uint8_t ism330dlc_convert_ms_to_freefall_dur(float ff_ms, ism330dlc_accel_gyro_odr_t odr)
+{
+    float odr_hz = ism330dlc_get_odr_hz(odr);
+    if (odr_hz <= 0.0f) return 0;
+
+    float lsb_ms = 1000.0f / odr_hz;
+    return ism330dlc_quantize(ff_ms, lsb_ms, 63);
+}
+
+
+ism330dlc_status_t ism330dlc_set_freefall_duration(ism330dlc_t *device, uint8_t duration)
+{
+    /* FF_DUR[5] is Bit 7 of WAKE_UP_DUR (5Ch)
+     * FF_DUR[4:0] is Bits [7:3] of FREE_FALL (5Dh)
+     */
+    ism330dlc_status_t status;
+
+    uint8_t ff_dur_msb = (duration & ISM330DLC_MASK_FF_RAW_MSB) ? ISM330DLC_MASK_FF_DUR5 : 0x00;
+    status = ism330dlc_write_register_with_mask(
+        device, 
+        ISM330DLC_ADDR_WAKE_UP_DUR, 
+        ISM330DLC_MASK_FF_DUR5, 
+        ff_dur_msb
+    );
+    if (status != ISM330DLC_SUCCESS) return status;
+
+    uint8_t ff_dur_lsbs = duration << 3;
+    return ism330dlc_write_register_with_mask(
+        device, 
+        ISM330DLC_ADDR_FREE_FALL, 
+        ISM330DLC_MASK_FF_DUR_4_0, 
+        ff_dur_lsbs
+    );
+};
+
+uint8_t ism330dlc_convert_ms_to_wakeup_dur(float wakeup_ms, ism330dlc_accel_gyro_odr_t odr)
+{
+    float odr_hz = ism330dlc_get_odr_hz(odr);
+    if (odr_hz <= 0.0f) return 0;
+
+    float lsb_ms = 1000.0f / odr_hz;
+    return ism330dlc_quantize(wakeup_ms, lsb_ms, 3);
+}
+
+ism330dlc_status_t ism330dlc_set_wakeup_duration(ism330dlc_t *device, uint8_t duration)
+{
+    return ism330dlc_write_register_with_mask(
+        device, 
+        ISM330DLC_ADDR_WAKE_UP_DUR, 
+        ISM330DLC_MASK_WAKE_DUR, 
+        (duration << 5)
+    );
+};
+
+uint8_t ism330dlc_convert_ms_to_double_tap_gap_dur(float gap_ms, ism330dlc_accel_gyro_odr_t odr)
+{
+    float odr_period_sec = ism330dlc_get_odr_period(odr);
+    if (odr_period_sec <= 0.0f) return 0;
+
+    float lsb_ms = 32000.0f * odr_period_sec;
+    return ism330dlc_quantize(gap_ms, lsb_ms, 15);
+}
+
+uint8_t ism330dlc_convert_ms_to_tap_shock_dur(float shock_ms, ism330dlc_accel_gyro_odr_t odr)
+{
+    float odr_period_sec = ism330dlc_get_odr_period(odr);
+    if (odr_period_sec <= 0.0f) return 0;
+
+    float lsb_ms = 8000.0f * odr_period_sec;
+    return ism330dlc_quantize(shock_ms, lsb_ms, 3);
+}
+
+uint8_t ism330dlc_convert_ms_to_tap_quiet_dur(float quiet_ms, ism330dlc_accel_gyro_odr_t odr)
+{
+    float odr_period_sec = ism330dlc_get_odr_period(odr);
+    if (odr_period_sec <= 0.0f) return 0;
+
+    float lsb_ms = 4000.0f * odr_period_sec;
+    return ism330dlc_quantize(quiet_ms, lsb_ms, 3);
+}
+
+ism330dlc_status_t ism330dlc_set_tap_timing(ism330dlc_t *device, uint8_t shock, uint8_t quiet, uint8_t duration)
+{
+    /* * INT_DUR2 (5Ah) Bit Map:
+     * [7:4] DUR (duration)
+     * [3:2] QUIET (quiet)
+     * [1:0] SHOCK (shock)
+     */
+    uint8_t value = 0;
+
+    value |= (duration << 4) & ISM330DLC_MASK_DUR;
+    value |= (quiet << 2)    & ISM330DLC_MASK_QUIET;
+    value |= (shock)         & ISM330DLC_MASK_SHOCK;
+
+    return ism330dlc_write_register_with_mask(
+        device,
+        ISM330DLC_ADDR_INT_DUR2,
+        0xFF,
+        value
+    );
+};
+
+uint8_t ism330dlc_convert_ms_to_sleep_dur(float sleep_ms, ism330dlc_accel_gyro_odr_t odr)
+{
+    float odr_hz = ism330dlc_get_odr_hz(odr);
+    if (odr_hz <= 0.0f) return 0;
+
+    float lsb_ms = 512000.0f / odr_hz;
+    
+    return ism330dlc_quantize(sleep_ms, lsb_ms, 15);
+}
+
+ism330dlc_status_t ism330dlc_set_sleep_duration(ism330dlc_t *device, uint8_t duration)
+{
+    return ism330dlc_write_register_with_mask(
+        device, 
+        ISM330DLC_ADDR_WAKE_UP_DUR, 
+        ISM330DLC_MASK_SLEEP_DUR, 
+        duration
+    );    
 };
