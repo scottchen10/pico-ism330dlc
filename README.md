@@ -93,7 +93,7 @@ If you want to use this driver within your own project, simply add this folder t
 
 ```cmake
 # In your project's CMakeLists.txt
-add_subdirectory(pico_ism330dlc)
+add_subdirectory(pico-ism330dlc)
 
 # Link the driver to your target
 target_link_libraries(your_target_name ism330dlc_driver)
