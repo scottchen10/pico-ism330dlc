@@ -1,4 +1,4 @@
-#include "ism330dlc_pico_hal.h"
+#include "ism330dlc_pico_pal.h"
 #include "hardware/gpio.h"
 #include <assert.h>
 
