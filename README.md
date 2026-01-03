@@ -43,11 +43,15 @@ Before building, ensure you have the following environment set up:
 ---
 
 ### Standalone Build Instructions:
-#### Step 1: Clone the Repository
+#### Step 1: Set-up the Repository
 
 ```bash
+# Clone repo
 git clone https://github.com/scottchen10/pico-ism330dlc.git
 cd pico_ism330dlc
+
+# Initialize submodule
+git submodule update --init --recursive
 ```
 
 #### Step 2. Configure your Targets
