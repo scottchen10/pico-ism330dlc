@@ -4,7 +4,7 @@
 
 ## Overview:
 
-A C libary for the Raspberry Pi Pico SDK to interface with the ST ISM330DLC iNEMO 6-axis inertial measurement unit (IMU). The project contains a platform independent driver core (`/ism330dlc_driver`) with the platform abstraction being implemented in (`/platform`). A few basic examples in (`/examples`) can be used to verify the functionality of the project and your sensor.
+A C libary using the Raspberry Pi Pico SDK to interface with the ST ISM330DLC iNEMO 6-axis inertial measurement unit (IMU). The project contains a platform independent driver core (`/ism330dlc_driver`) with the platform abstraction being implemented in (`/platform`). A few basic examples in (`/examples`) can be used to verify the functionality of the project and your sensor.
 
 <blockquote>
 <b>Notice:</b> <br>
